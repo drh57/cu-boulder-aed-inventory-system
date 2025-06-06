@@ -130,6 +130,40 @@
             display: none; /* Hidden by default */
         }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        
+        /* Enhanced popup styling */
+        .building-popup .leaflet-popup-content-wrapper {
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+        
+        .building-popup .leaflet-popup-content {
+            margin: 12px 15px;
+            line-height: 1.4;
+        }
+        
+        .building-popup button:hover {
+            background: #0056b3 !important;
+            transform: translateY(-1px);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+            transition: all 0.2s ease;
+        }
+        
+        /* Cluster assignment select styling */
+        #cluster-assignment option {
+            padding: 5px 8px;
+            margin: 2px 0;
+        }
+        
+        /* Building marker visual feedback */
+        .building-marker {
+            transition: filter 0.2s ease;
+        }
+        
+        .building-marker:hover {
+            filter: brightness(1.1) !important;
+            cursor: pointer;
+        }
     </style>
 </head>
 <body>
@@ -2375,6 +2409,16 @@ document.addEventListener('DOMContentLoaded', () => {
                         </span>
                     </div>
                 </div>
+                
+                <div id="cluster-assignment-section" style="margin-bottom: 15px; background: #fff3cd; padding: 12px; border-radius: 5px; border-left: 4px solid #ffc107; display: none;">
+                    <label style="display: block; margin-bottom: 8px; font-weight: bold; color: #856404;">🔄 Change Work Block Assignment:</label>
+                    <select id="cluster-assignment" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 0.9em;">
+                        <option value="">Select a work block...</option>
+                    </select>
+                    <small style="color: #6c757d; font-size: 0.8em; margin-top: 5px; display: block;">
+                        Moving this building will update travel times and re-order the work blocks accordingly.
+                    </small>
+                </div>
                 <div style="text-align: right;">
                     <button id="cancel-edit" style="padding: 8px 16px; margin-right: 10px; background: #6c757d; color: white; border: none; border-radius: 4px; cursor: pointer;">Cancel</button>
                     <button id="save-edit" style="padding: 8px 16px; background: #28a745; color: white; border: none; border-radius: 4px; cursor: pointer;">Save Changes</button>
@@ -2407,8 +2451,13 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    // Edit building from popup (with cluster context)
+    window.editBuildingFromPopup = function(buildingCode, currentClusterIndex) {
+        window.editBuilding(buildingCode, currentClusterIndex);
+    };
+
     // Make function globally accessible  
-    window.editBuilding = function(buildingCode) {
+    window.editBuilding = function(buildingCode, currentClusterIndex = null) {
         console.log('Edit building called:', buildingCode);
         const building = buildingData.find(b => b.code === buildingCode);
         if (!building) return;
@@ -2430,6 +2479,44 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('edit-address').value = getBuildingAddress(building.code, building.name);
         document.getElementById('edit-lat').value = building.lat || '';
         document.getElementById('edit-lon').value = building.lon || '';
+        
+        // Handle cluster assignment section
+        const clusterSection = document.getElementById('cluster-assignment-section');
+        const clusterSelect = document.getElementById('cluster-assignment');
+        
+        if (currentClusterIndex !== null && currentClusters.length > 1) {
+            // Show cluster assignment section
+            clusterSection.style.display = 'block';
+            
+            // Clear and populate cluster options
+            clusterSelect.innerHTML = '<option value="">Keep in current work block</option>';
+            
+            const clusterColors = generateClusterColors(currentClusters.length);
+            currentClusters.forEach((cluster, index) => {
+                if (index !== currentClusterIndex) {
+                    const color = clusterColors[index];
+                    const buildingCount = cluster.path.length;
+                    const timeUsed = Math.round(cluster.totalTime);
+                    const timeRemaining = MAX_CLUSTER_TIME - timeUsed;
+                    
+                    clusterSelect.innerHTML += `
+                        <option value="${index}" style="background: ${color}20; color: ${color};">
+                            Work Block ${index + 1} • ${buildingCount} buildings • ${timeUsed}/${MAX_CLUSTER_TIME} min (${timeRemaining} remaining)
+                        </option>
+                    `;
+                }
+            });
+            
+            // Add option to create new cluster
+            clusterSelect.innerHTML += `
+                <option value="new" style="background: #28a74520; color: #28a745;">
+                    ➕ Create New Work Block
+                </option>
+            `;
+        } else {
+            // Hide cluster assignment section
+            clusterSection.style.display = 'none';
+        }
         
         // Setup event listeners for real-time preview
         ['edit-aed-count', 'edit-aed-buffer', 'edit-gsf'].forEach(id => {
@@ -2513,6 +2600,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const newAddress = document.getElementById('edit-address').value.trim();
             const newLat = parseFloat(document.getElementById('edit-lat').value);
             const newLon = parseFloat(document.getElementById('edit-lon').value);
+            const newClusterAssignment = document.getElementById('cluster-assignment').value;
             
             if (newCode && newName) {
                 // Validate coordinates
@@ -2532,6 +2620,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
                 
                 // Update building data
+                const oldCode = building.code;
                 building.code = newCode;
                 building.name = newName;
                 building.gsf = newGsf;
@@ -2543,18 +2632,63 @@ document.addEventListener('DOMContentLoaded', () => {
                 // Update address mapping
                 buildingAddresses[newCode] = newAddress;
                 
-                // Update the building in current clusters too
-                currentClusters.forEach(cluster => {
-                    cluster.path.forEach(b => {
-                        if (b.code === newCode) {
-                            b.lat = newLat;
-                            b.lon = newLon;
+                // Handle cluster reassignment
+                if (newClusterAssignment !== '' && currentClusterIndex !== null) {
+                    const buildingToMove = { ...building };
+                    
+                    // Remove from current cluster
+                    const currentCluster = currentClusters[currentClusterIndex];
+                    const buildingIndex = currentCluster.path.findIndex(b => b.code === oldCode);
+                    if (buildingIndex !== -1) {
+                        currentCluster.path.splice(buildingIndex, 1);
+                        
+                        // If cluster is now empty, remove it
+                        if (currentCluster.path.length === 0) {
+                            currentClusters.splice(currentClusterIndex, 1);
                         }
+                    }
+                    
+                    if (newClusterAssignment === 'new') {
+                        // Create new cluster
+                        const newCluster = {
+                            buildings: [buildingToMove],
+                            path: [buildingToMove],
+                            totalTime: buildingToMove.totalTime || 0
+                        };
+                        currentClusters.push(newCluster);
+                        console.log(`Created new work block for ${newCode}`);
+                    } else {
+                        // Add to existing cluster
+                        const targetClusterIndex = parseInt(newClusterAssignment);
+                        const targetCluster = currentClusters[targetClusterIndex];
+                        if (targetCluster) {
+                            targetCluster.path.push(buildingToMove);
+                            console.log(`Moved ${newCode} to work block ${targetClusterIndex + 1}`);
+                        }
+                    }
+                    
+                    // Mark as manually arranged
+                    manuallyArranged = true;
+                    
+                    // Refresh the entire display
+                    displayClusters();
+                    
+                    // Update total time summary
+                    setTimeout(() => updateTotalTimeSummary(), 100);
+                } else {
+                    // Just update existing assignments
+                    currentClusters.forEach(cluster => {
+                        cluster.path.forEach(b => {
+                            if (b.code === oldCode || b.code === newCode) {
+                                Object.assign(b, building);
+                            }
+                        });
                     });
-                });
+                    
+                    // Recalculate times only
+                    recalculateTimesOnly();
+                }
                 
-                // Recalculate times and refresh display
-                recalculateTimesOnly();
                 modal.style.display = 'none';
                 
                 console.log(`Building ${newCode} updated with coordinates: ${newLat}, ${newLon}`);
@@ -2868,33 +3002,88 @@ document.addEventListener('DOMContentLoaded', () => {
                     marker.addTo(mapLayers);
                 }
 
-                // Create popup content
-                const popupContent = `<b>${b.name} (${b.code})</b><br>Address: ${getBuildingAddress(b.code, b.name)}<br>Work Block: ${index + 1}<br>Step: ${stepNumber}`;
+                // Create enhanced popup content with edit button
+                const popupContent = `
+                    <div style="text-align: center; min-width: 200px;">
+                        <div style="font-weight: bold; font-size: 1.1em; margin-bottom: 8px; color: ${color};">
+                            ${b.name} (${b.code})
+                        </div>
+                        <div style="margin-bottom: 6px; color: #666; font-size: 0.9em;">
+                            📍 ${getBuildingAddress(b.code, b.name)}
+                        </div>
+                        <div style="margin-bottom: 10px; padding: 4px 8px; background: ${color}; color: white; border-radius: 12px; font-size: 0.85em; display: inline-block;">
+                            Work Block ${index + 1} • Step ${stepNumber}
+                        </div>
+                        <div style="margin-top: 8px;">
+                            <button onclick="window.editBuildingFromPopup('${b.code}', ${index})" 
+                                    style="background: #007bff; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 0.9em; font-weight: bold;">
+                                ✏️ Edit Building
+                            </button>
+                        </div>
+                        <div style="margin-top: 6px; font-size: 0.8em; color: #999;">
+                            Click to edit • Drag to move
+                        </div>
+                    </div>
+                `;
                 
-                // Custom popup behavior: show on mousedown, hide on mouseup
-                let isMouseDown = false;
-                let dragStarted = false;
+                // Enhanced popup behavior: click to show/hide, with visual selection feedback
+                let isDragging = false;
                 
-                marker.on('mousedown', function(e) {
-                    isMouseDown = true;
-                    dragStarted = false;
-                    // Show popup immediately on mousedown
-                    marker.bindPopup(popupContent, {
-                        closeButton: false,
-                        autoClose: false,
-                        closeOnClick: false,
-                        closeOnEscapeKey: false
-                    }).openPopup();
+                // Click handler for popup toggle
+                marker.on('click', function(e) {
+                    if (!isDragging) {
+                        const isCurrentlyOpen = marker.getPopup() && marker.getPopup().isOpen();
+                        
+                        // First, close any other open popups and reset their visual state
+                        Object.values(buildingMarkers).forEach(otherMarker => {
+                            if (otherMarker.getPopup() && otherMarker.getPopup().isOpen()) {
+                                otherMarker.closePopup();
+                                // Reset visual state of other markers
+                                const otherIcon = otherMarker.getIcon();
+                                if (otherIcon.options.html) {
+                                    const originalHtml = otherIcon.options.html.replace(/filter: brightness\(0\.7\);\s*/g, '');
+                                    otherMarker.setIcon(L.divIcon({
+                                        ...otherIcon.options,
+                                        html: originalHtml
+                                    }));
+                                }
+                            }
+                        });
+                        
+                        // Toggle popup for clicked marker
+                        if (isCurrentlyOpen) {
+                            // If this marker was already open, close it and deselect
+                            marker.closePopup();
+                            console.log(`Deselected marker for ${b.code}`);
+                        } else {
+                            // Show popup and darken marker
+                            marker.bindPopup(popupContent, {
+                                closeButton: true,
+                                autoClose: false,
+                                closeOnClick: false,
+                                closeOnEscapeKey: true,
+                                className: 'building-popup'
+                            }).openPopup();
+                            
+                            // Darken the selected marker
+                            const icon = marker.getIcon();
+                            if (icon.options.html && !icon.options.html.includes('filter: brightness(0.7)')) {
+                                const darkenedHtml = icon.options.html.replace('style="', 'style="filter: brightness(0.7); ');
+                                marker.setIcon(L.divIcon({
+                                    ...icon.options,
+                                    html: darkenedHtml
+                                }));
+                            }
+                            console.log(`Selected marker for ${b.code}`);
+                        }
+                    }
                 });
                 
+                // Drag handling
                 marker.on('dragstart', function(e) {
-                    dragStarted = true;
-                    // Change cursor during drag
+                    isDragging = true;
                     document.body.style.cursor = 'grabbing';
-                    // Keep popup open during drag
-                    if (marker.getPopup()) {
-                        marker.getPopup().options.closeOnClick = false;
-                    }
+                    // Keep popup open during drag if it was open
                 });
                 
                 marker.on('dragend', function(event) {
@@ -2908,43 +3097,24 @@ document.addEventListener('DOMContentLoaded', () => {
                     b.lat = newLatLng.lat;
                     b.lon = newLatLng.lng;
                     
-                    // Reset cursor
+                    // Reset cursor and drag state
                     document.body.style.cursor = '';
-                    
-                    // Close popup after drag ends
                     setTimeout(() => {
-                        if (marker.getPopup()) {
-                            marker.closePopup();
-                        }
-                        isMouseDown = false;
-                        dragStarted = false;
+                        isDragging = false;
                     }, 100);
                     
                     recalculateTimesOnly();
                 });
                 
-                // Handle mouseup to close popup if not dragging
-                marker.on('mouseup', function(e) {
-                    if (isMouseDown && !dragStarted) {
-                        // Short click - close popup after a brief delay
-                        setTimeout(() => {
-                            if (marker.getPopup()) {
-                                marker.closePopup();
-                            }
-                            isMouseDown = false;
-                        }, 1500); // Keep visible for 1.5 seconds on click
-                    }
-                });
-                
-                // Global mouseup to handle cases where mouseup happens outside the marker
-                document.addEventListener('mouseup', function() {
-                    if (isMouseDown && !dragStarted) {
-                        setTimeout(() => {
-                            if (marker.getPopup()) {
-                                marker.closePopup();
-                            }
-                            isMouseDown = false;
-                        }, 100);
+                // Handle popup close events to reset visual state
+                marker.on('popupclose', function(e) {
+                    const icon = marker.getIcon();
+                    if (icon.options.html) {
+                        const originalHtml = icon.options.html.replace(/filter: brightness\(0\.7\);\s*/g, '');
+                        marker.setIcon(L.divIcon({
+                            ...icon.options,
+                            html: originalHtml
+                        }));
                     }
                 });
 
