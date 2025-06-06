@@ -856,7 +856,7 @@ document.addEventListener('DOMContentLoaded', () => {
         yPosition += 8;
         pdf.text(`Total Buildings: ${totalBuildings}`, MARGIN, yPosition);
         yPosition += 8;
-        pdf.text(`Total AEDs to Inventory: ${totalAEDs}`, MARGIN, yPosition);
+        pdf.text(`Total AEDs to Inventory: ${totalAEDs} (assumed)`, MARGIN, yPosition);
         yPosition += 8;
         pdf.text(`Average Time per Building: ${(totalTime/totalBuildings).toFixed(1)} minutes`, MARGIN, yPosition);
         yPosition += 8;
@@ -1054,7 +1054,7 @@ document.addEventListener('DOMContentLoaded', () => {
             yPosition += 8;
             pdf.text(`Buildings: ${cluster.path.length}`, MARGIN, yPosition);
             yPosition += 8;
-            pdf.text(`Total AEDs: ${totalAEDs}`, MARGIN, yPosition);
+            pdf.text(`Total AEDs: ${totalAEDs} (assumed)`, MARGIN, yPosition);
             yPosition += 8;
             pdf.text(`AED Location Time: ~${Math.round(aedLocationTime)} minutes (variable per building)`, MARGIN, yPosition);
             yPosition += 8;
@@ -1287,6 +1287,8 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         
         // Restore the full map display after generating all screenshots
+        // Wait a moment to ensure map capture is complete
+        await new Promise(resolve => setTimeout(resolve, 500));
         processAndDisplayData();
         
         // Save the PDF
@@ -1575,85 +1577,140 @@ document.addEventListener('DOMContentLoaded', () => {
             const minLon = Math.min(...lons);
             const maxLon = Math.max(...lons);
             
-            // Add padding to bounds
-            const latPadding = (maxLat - minLat) * 0.2;
-            const lonPadding = (maxLon - minLon) * 0.2;
+            // Add padding to bounds (more conservative for better framing)
+            const latPadding = Math.max((maxLat - minLat) * 0.3, 0.001);
+            const lonPadding = Math.max((maxLon - minLon) * 0.3, 0.001);
             const bounds = [
                 [minLat - latPadding, minLon - lonPadding],
                 [maxLat + latPadding, maxLon + lonPadding]
             ];
             
-            // Temporarily hide all markers and routes except this cluster
+            // Clear all existing layers completely
             mapLayers.clearLayers();
+            
+            // Force map invalidation to ensure clean state
+            map.invalidateSize();
+            
+            // Wait a moment for clearing
+            await new Promise(resolve => setTimeout(resolve, 200));
             
             // Create temporary markers and route for just this cluster
             const clusterColor = BASE_COLORS[clusterIndex % BASE_COLORS.length];
             
-            // Add markers with abbreviated labels
-            cluster.path.forEach((building, buildingIndex) => {
-                const marker = L.circleMarker([building.lat, building.lon], {
-                    color: 'white', weight: 2, fillColor: clusterColor, 
-                    fillOpacity: 0.9, radius: 8
-                }).addTo(mapLayers);
-                
-                // Add number label
-                const numberIcon = L.divIcon({
-                    html: `<div style="background: ${clusterColor}; color: white; border-radius: 50%; width: 20px; height: 20px; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 12px;">${buildingIndex + 1}</div>`,
-                    className: '',
-                    iconSize: [20, 20],
-                    iconAnchor: [10, 10]
-                });
-                
-                L.marker([building.lat, building.lon], { icon: numberIcon }).addTo(mapLayers);
-                
-                // Add building code label
-                L.marker([building.lat, building.lon], {
-                    icon: L.divIcon({
-                        html: `<div style="background: rgba(255,255,255,0.8); padding: 2px 4px; border-radius: 3px; font-size: 10px; font-weight: bold; margin-top: 25px;">${building.code}</div>`,
-                        className: '',
-                        iconSize: [40, 15],
-                        iconAnchor: [20, 0]
-                    })
-                }).addTo(mapLayers);
-            });
-            
-            // Add route line
+            // Add route line FIRST (so it appears behind markers)
             const latlngs = cluster.path.map(p => [p.lat, p.lon]);
             const routeLine = L.polyline(latlngs, { 
-                color: clusterColor, weight: 4, opacity: 0.8, 
-                dashArray: '10, 5' 
+                color: clusterColor, 
+                weight: 6, 
+                opacity: 0.9, 
+                dashArray: '12, 8',
+                lineCap: 'round',
+                lineJoin: 'round'
             });
             routeLine.addTo(mapLayers);
-            routeLine.bringToFront();
             
-            // Fit map to cluster bounds
-            map.fitBounds(bounds, { padding: [20, 20] });
+            // Add markers with better visibility
+            cluster.path.forEach((building, buildingIndex) => {
+                // Background circle for better visibility
+                const backgroundMarker = L.circleMarker([building.lat, building.lon], {
+                    color: 'white', 
+                    weight: 3, 
+                    fillColor: clusterColor, 
+                    fillOpacity: 1.0, 
+                    radius: 12
+                }).addTo(mapLayers);
+                
+                // Number label with better styling
+                const numberIcon = L.divIcon({
+                    html: `<div style="
+                        background: ${clusterColor}; 
+                        color: white; 
+                        border: 2px solid white;
+                        border-radius: 50%; 
+                        width: 24px; 
+                        height: 24px; 
+                        display: flex; 
+                        align-items: center; 
+                        justify-content: center; 
+                        font-weight: bold; 
+                        font-size: 14px;
+                        box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+                        font-family: Arial, sans-serif;
+                    ">${buildingIndex + 1}</div>`,
+                    className: '',
+                    iconSize: [24, 24],
+                    iconAnchor: [12, 12]
+                });
+                
+                L.marker([building.lat, building.lon], { 
+                    icon: numberIcon,
+                    zIndexOffset: 1000  // Ensure markers appear on top
+                }).addTo(mapLayers);
+                
+                // Building code label with better styling
+                L.marker([building.lat, building.lon], {
+                    icon: L.divIcon({
+                        html: `<div style="
+                            background: rgba(255,255,255,0.95); 
+                            padding: 3px 6px; 
+                            border-radius: 4px; 
+                            font-size: 11px; 
+                            font-weight: bold; 
+                            margin-top: 30px;
+                            border: 1px solid #ccc;
+                            box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+                            font-family: Arial, sans-serif;
+                        ">${building.code}</div>`,
+                        className: '',
+                        iconSize: [50, 20],
+                        iconAnchor: [25, 0]
+                    }),
+                    zIndexOffset: 500
+                }).addTo(mapLayers);
+            });
             
-            // Wait for map to render
-            await new Promise(resolve => setTimeout(resolve, 1000));
+            // Fit map to cluster bounds with more generous padding
+            map.fitBounds(bounds, { 
+                padding: [30, 30],
+                maxZoom: 17  // Prevent zooming in too much for single buildings
+            });
             
-            // Capture the map with better sizing for PDF
+            // Wait longer for map to render and layers to load
+            await new Promise(resolve => setTimeout(resolve, 1500));
+            
+            // Force one more layer refresh
+            mapLayers.bringToFront();
+            
+            // Additional wait for final rendering
+            await new Promise(resolve => setTimeout(resolve, 500));
+            
+            // Capture the map with optimized settings
             const mapElement = document.getElementById('map');
-            
-            // Set consistent capture dimensions for better PDF formatting
-            const captureWidth = 800;  // Consistent width for all captures
-            const captureHeight = 500; // Consistent height for better aspect ratio
             
             const canvas = await html2canvas(mapElement, {
                 useCORS: true,
                 allowTaint: false,
                 backgroundColor: '#f8f9fa',
-                width: captureWidth,
-                height: captureHeight,
-                scale: 1,
+                width: 800,
+                height: 500,
+                scale: 1.5,  // Higher quality capture
                 logging: false,
-                foreignObjectRendering: false
+                foreignObjectRendering: true,  // Try to capture custom HTML elements
+                removeContainer: false,
+                imageTimeout: 30000,  // Longer timeout for image loading
+                onclone: function(clonedDoc) {
+                    // Ensure styles are preserved in cloned document
+                    const clonedMap = clonedDoc.getElementById('map');
+                    if (clonedMap) {
+                        clonedMap.style.background = '#f8f9fa';
+                    }
+                }
             });
             
             // Restore original map state
             map.setView(originalView, originalZoom);
             
-            return canvas.toDataURL('image/png');
+            return canvas.toDataURL('image/png', 0.9);  // Slight compression for smaller file size
             
         } catch (error) {
             console.error('Error capturing map:', error);
