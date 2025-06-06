@@ -175,6 +175,16 @@
             </p>
             <button id="recalculate-btn">Recalculate Clusters</button>
             <button id="recalculate-times-btn" style="display: block; width: 100%; padding: 8px; font-size: 0.9em; font-weight: bold; background-color: #f39c12; color: white; border: none; border-radius: 5px; cursor: pointer; margin-bottom: 10px; transition: background-color 0.2s;">Recalculate Times Only</button>
+            
+            <div style="margin-bottom: 10px; padding: 8px; background: #e8f5e8; border: 1px solid #c8e6c9; border-radius: 5px;">
+                <label style="display: flex; align-items: center; font-size: 0.9em; color: #2e7d32; cursor: pointer;">
+                    <input type="checkbox" id="campus-mode" style="margin-right: 8px;">
+                    🏫 Campus Mode (Use direct paths instead of street routing)
+                </label>
+                <small style="color: #555; font-size: 0.8em; margin-top: 4px; display: block;">
+                    Recommended for campus environments where buildings are connected by walkways
+                </small>
+            </div>
         </div>
         <div class="summary-content-wrapper">
              <div class="loader-container">
@@ -3152,11 +3162,17 @@ document.addEventListener('DOMContentLoaded', () => {
                     // Add route segment with step number
                     const routeStart = [prevBuilding.lat, prevBuilding.lon];
                     const routeEnd = [b.lat, b.lon];
+                    
+                    // Check if campus mode is enabled
+                    const campusMode = document.getElementById('campus-mode') && document.getElementById('campus-mode').checked;
+                    
                     const routeSegment = L.polyline([routeStart, routeEnd], { 
                         color: color, 
-                        weight: 4, 
-                        opacity: 0.8, 
-                        dashArray: travelInfo.method === 'drive' ? '10, 5' : null
+                        weight: campusMode ? 3 : 4, 
+                        opacity: campusMode ? 0.9 : 0.8, 
+                        dashArray: campusMode ? null : (travelInfo.method === 'drive' ? '10, 5' : null),
+                        lineCap: campusMode ? 'round' : 'butt',
+                        lineJoin: campusMode ? 'round' : 'miter'
                     });
                     
                     // Add step number at midpoint of route
@@ -3224,7 +3240,10 @@ document.addEventListener('DOMContentLoaded', () => {
             return false;
         });
         
-        if (hasAnyCustomSettings || hasQuestionableLocations || hasStraightLineRoutes) {
+        // Check if campus mode is enabled
+        const campusMode = document.getElementById('campus-mode') && document.getElementById('campus-mode').checked;
+        
+        if (hasAnyCustomSettings || hasQuestionableLocations || hasStraightLineRoutes || campusMode) {
             const legendDiv = document.createElement('div');
             legendDiv.style.cssText = `
                 margin-top: 15px; padding: 10px; background: #f8f9fa; border-radius: 5px;
@@ -3232,6 +3251,10 @@ document.addEventListener('DOMContentLoaded', () => {
             `;
             
             let legendContent = '<strong style="color: #e67e22;">Legend:</strong><br>';
+            
+            if (campusMode) {
+                legendContent += '<span style="color: #28a745; font-weight: bold;">🏫</span> = Campus mode active (direct path routing)<br>';
+            }
             
             if (hasAnyCustomSettings) {
                 legendContent += '<span style="color: #e67e22; font-weight: bold;">*</span> = Building has custom AED search buffer time<br>';
@@ -3241,7 +3264,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 legendContent += '<span style="color: #e74c3c; font-weight: bold;">❓</span> = Location marked as questionable<br>';
             }
             
-            if (hasStraightLineRoutes) {
+            if (hasStraightLineRoutes && !campusMode) {
                 legendContent += '<span style="color: #17a2b8; font-weight: bold;">📐</span> = Route uses straight-line distance calculation<br>';
             }
             
@@ -3585,6 +3608,15 @@ document.addEventListener('DOMContentLoaded', () => {
     async function enhanceRoutesWithActualPaths() {
         // This function will replace straight-line routes with actual route geometry
         console.log('Starting route enhancement for', routeSegments.length, 'route segments');
+        
+        const campusMode = document.getElementById('campus-mode').checked;
+        if (campusMode) {
+            console.log('Campus mode enabled - keeping direct path routing');
+            // In campus mode, just update times but keep straight-line routes
+            updateSidebarDisplay();
+            updateTotalTimeSummary();
+            return;
+        }
         
         for (let i = 0; i < routeSegments.length; i++) {
             const segment = routeSegments[i];
@@ -4291,6 +4323,30 @@ document.addEventListener('DOMContentLoaded', () => {
     const recalcTimesBtn = document.getElementById('recalculate-times-btn');
     recalcTimesBtn.addEventListener('mouseover', () => recalcTimesBtn.style.backgroundColor = '#e67e22');
     recalcTimesBtn.addEventListener('mouseout', () => recalcTimesBtn.style.backgroundColor = '#f39c12');
+    
+    // Campus mode toggle handler
+    document.getElementById('campus-mode').addEventListener('change', function() {
+        const campusMode = this.checked;
+        console.log('Campus mode toggled:', campusMode ? 'ON' : 'OFF');
+        
+        if (campusMode) {
+            // Clear any existing actual route times when switching to campus mode
+            actualRouteTimes = {};
+            console.log('Cleared actual route times for campus mode');
+        }
+        
+        // Refresh the display
+        displayClusters();
+        
+        // Update routes based on mode
+        setTimeout(() => {
+            if (!campusMode) {
+                // Only fetch actual routes if not in campus mode
+                enhanceRoutesWithActualPaths();
+            }
+            updateTotalTimeSummary();
+        }, 100);
+    });
     
     new ResizeObserver(() => map.invalidateSize()).observe(mapElement);
 });
