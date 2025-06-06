@@ -1088,20 +1088,20 @@ document.addEventListener('DOMContentLoaded', () => {
             let cumulativeTime = 0;
             
             cluster.path.forEach((building, buildingIndex) => {
-                // Check if we need a new page
-                if (yPosition > (PAGE_HEIGHT - MARGIN - 20)) {
+                // Check if we need a new page (more conservative spacing)
+                if (yPosition > (PAGE_HEIGHT - MARGIN - 60)) {
                     pdf.addPage();
                     yPosition = MARGIN;
                     // Repeat headers on new page
                     pdf.setFontSize(9);
                     pdf.setTextColor(40);
-                                            pdf.text('Step', MARGIN, yPosition);
-                        pdf.text('Activity', MARGIN + 15, yPosition);
-                        pdf.text('Location', MARGIN + 65, yPosition);
-                        pdf.text('Time', MARGIN + 120, yPosition);
-                        pdf.text('Cumulative', MARGIN + 145, yPosition);
-                        yPosition += 5;
-                        pdf.line(MARGIN, yPosition, PAGE_WIDTH - MARGIN, yPosition);
+                    pdf.text('Step', MARGIN, yPosition);
+                    pdf.text('Activity', MARGIN + 15, yPosition);
+                    pdf.text('Location', MARGIN + 65, yPosition);
+                    pdf.text('Time', MARGIN + 120, yPosition);
+                    pdf.text('Cumulative', MARGIN + 145, yPosition);
+                    yPosition += 5;
+                    pdf.line(MARGIN, yPosition, PAGE_WIDTH - MARGIN, yPosition);
                     yPosition += 8;
                 }
                 
@@ -1192,11 +1192,32 @@ document.addEventListener('DOMContentLoaded', () => {
                     stepNumber++;
                 }
                 
-                // Add address reference with wrapping
+                // Add address reference with wrapping and page break check
                 pdf.setFontSize(7);
                 pdf.setTextColor(120);
                 const addressText = `Address: ${getBuildingAddress(building.code, building.name)}`;
                 const wrappedAddress = pdf.splitTextToSize(addressText, CONTENT_WIDTH - 20);
+                
+                // Check if address would overflow page
+                if (yPosition + (wrappedAddress.length * 4) > PAGE_HEIGHT - MARGIN - 30) {
+                    pdf.addPage();
+                    yPosition = MARGIN;
+                    // Repeat headers on new page
+                    pdf.setFontSize(9);
+                    pdf.setTextColor(40);
+                    pdf.text('Step', MARGIN, yPosition);
+                    pdf.text('Activity', MARGIN + 15, yPosition);
+                    pdf.text('Location', MARGIN + 65, yPosition);
+                    pdf.text('Time', MARGIN + 120, yPosition);
+                    pdf.text('Cumulative', MARGIN + 145, yPosition);
+                    yPosition += 5;
+                    pdf.line(MARGIN, yPosition, PAGE_WIDTH - MARGIN, yPosition);
+                    yPosition += 8;
+                    // Reset font for address
+                    pdf.setFontSize(7);
+                    pdf.setTextColor(120);
+                }
+                
                 pdf.text(wrappedAddress, MARGIN + 15, yPosition);
                 yPosition += wrappedAddress.length * 4 + 4;
                 
@@ -1229,11 +1250,27 @@ document.addEventListener('DOMContentLoaded', () => {
             try {
                 const mapImage = await captureClusterMap(cluster, i);
                 if (mapImage) {
-                                    // Add the map image to PDF (fit to page width)
-                const imgWidth = CONTENT_WIDTH; // Use full content width (page width minus margins)
-                const imgHeight = 100; // Reasonable height for map
-                pdf.addImage(mapImage, 'PNG', MARGIN, yPosition, imgWidth, imgHeight);
-                    yPosition += imgHeight + 5;
+                    // Check if we need a new page for the map
+                    const mapHeight = 120; // Reasonable height for map
+                    if (yPosition + mapHeight > PAGE_HEIGHT - MARGIN - 20) {
+                        pdf.addPage();
+                        yPosition = MARGIN;
+                        pdf.setFontSize(12);
+                        pdf.setTextColor(40);
+                        pdf.text('Route Map:', MARGIN, yPosition);
+                        yPosition += 10;
+                    }
+                    
+                    // Add the map image to PDF with proper scaling
+                    const imgWidth = CONTENT_WIDTH; // Use full content width (page width minus margins)
+                    const imgHeight = mapHeight;
+                    
+                    // Add a border around the map for better presentation
+                    pdf.setDrawColor(200);
+                    pdf.rect(MARGIN - 1, yPosition - 1, imgWidth + 2, imgHeight + 2);
+                    
+                    pdf.addImage(mapImage, 'PNG', MARGIN, yPosition, imgWidth, imgHeight);
+                    yPosition += imgHeight + 10;
                 } else {
                     pdf.setFontSize(9);
                     pdf.setTextColor(100);
@@ -1595,14 +1632,22 @@ document.addEventListener('DOMContentLoaded', () => {
             // Wait for map to render
             await new Promise(resolve => setTimeout(resolve, 1000));
             
-            // Capture the map
+            // Capture the map with better sizing for PDF
             const mapElement = document.getElementById('map');
+            
+            // Set consistent capture dimensions for better PDF formatting
+            const captureWidth = 800;  // Consistent width for all captures
+            const captureHeight = 500; // Consistent height for better aspect ratio
+            
             const canvas = await html2canvas(mapElement, {
                 useCORS: true,
                 allowTaint: false,
                 backgroundColor: '#f8f9fa',
-                width: mapElement.offsetWidth,
-                height: mapElement.offsetHeight
+                width: captureWidth,
+                height: captureHeight,
+                scale: 1,
+                logging: false,
+                foreignObjectRendering: false
             });
             
             // Restore original map state

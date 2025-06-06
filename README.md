@@ -55,7 +55,7 @@ A comprehensive web-based application for planning and optimizing AED (Automated
 4. **Manual Adjustments**: Drag buildings between clusters or reorder within clusters
 5. **Fine-tune Times**: Edit individual building AED counts and search buffer times
 6. **Save Work**: Use "Save State to CSV" to preserve your configuration
-7. **Generate Report**: Click "Generate PDF Report" for printable work plans
+7. **Generate Report**: Click "Generate PDF Report" for professional printable work plans with embedded maps
 
 ### Key Controls
 - **Drag Pins**: Click and hold building markers to reposition them on the map
@@ -121,7 +121,8 @@ Generated reports include:
 - **Executive Summary**: Total time, buildings, and AEDs
 - **Methodology**: Detailed explanation of time calculations
 - **Step-by-Step Instructions**: Complete workflow for each work block
-- **Route Maps**: Visual representation of each work block's path
+- **Route Maps**: Visual representation of each work block's path with proper scaling and margins
+- **Professional Layout**: US Letter format with 0.75" margins for proper printing
 
 ## 🐛 Troubleshooting
 
@@ -142,6 +143,13 @@ Generated reports include:
 **PDF generation failing?**
 - Ensure you have clusters generated first
 - Check browser console for specific error messages
+- Wait for maps to fully load before generating PDF
+- If maps appear cut off, try refreshing the page and regenerating
+
+**Maps cut off in PDF?**
+- Fixed in latest version with proper scaling and margin handling
+- Maps now automatically fit to page width with consistent formatting
+- Report uses US Letter format (8.5" x 11") with 0.75" margins
 
 ### Browser Compatibility
 - **Chrome/Edge**: Full functionality
