@@ -634,6 +634,8 @@ document.addEventListener('DOMContentLoaded', () => {
     // Global variable to store current clusters for PDF generation
     let currentClusters = [];
     let manuallyArranged = false;
+    let routeSegments = []; // Store references to route segments for replacement
+    let actualRouteTimes = {}; // Store actual route times for sidebar updates
 
     // --- GEOCODING FUNCTION ---
     async function geocodeBuilding(buildingName, code) {
@@ -1108,7 +1110,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 // Travel to building (skip for first building)
                 if (buildingIndex > 0) {
                     const prevBuilding = cluster.path[buildingIndex - 1];
-                    const travelInfo = calculateTravelTime(prevBuilding.lat, prevBuilding.lon, building.lat, building.lon);
+                    const travelInfo = calculateTravelTimeSync(prevBuilding.lat, prevBuilding.lon, building.lat, building.lon);
                     const travelTime = Math.round(travelInfo.time);
                     cumulativeTime += travelTime;
                     
@@ -1560,6 +1562,56 @@ document.addEventListener('DOMContentLoaded', () => {
         });
         
         document.querySelector('.summary-header').appendChild(pdfBtn);
+        
+        // Add total time summary below PDF button
+        addTotalTimeSummary();
+    }
+
+    // --- ADD TOTAL TIME SUMMARY ---
+    function addTotalTimeSummary() {
+        const summaryDiv = document.createElement('div');
+        summaryDiv.id = 'total-time-summary';
+        summaryDiv.style.cssText = `
+            background: #e8f5e8; border: 1px solid #c3e6c3; border-radius: 8px;
+            padding: 15px; margin-bottom: 20px; text-align: center;
+        `;
+        
+        document.querySelector('.summary-header').appendChild(summaryDiv);
+        updateTotalTimeSummary();
+    }
+
+    // --- UPDATE TOTAL TIME SUMMARY ---
+    function updateTotalTimeSummary() {
+        const summaryDiv = document.getElementById('total-time-summary');
+        if (!summaryDiv || !currentClusters || currentClusters.length === 0) return;
+        
+        const totalMinutes = currentClusters.reduce((sum, cluster) => sum + (cluster.totalTime || 0), 0);
+        const totalHours = totalMinutes / 60;
+        const avgTimePerCluster = totalMinutes / currentClusters.length;
+        
+        summaryDiv.innerHTML = `
+            <div style="font-weight: bold; font-size: 1.1em; color: #2c5234; margin-bottom: 8px;">
+                Total Time Estimate
+            </div>
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <div style="flex: 1;">
+                    <div style="font-size: 1.3em; font-weight: bold; color: #27ae60;">
+                        ${totalHours.toFixed(1)} hours
+                    </div>
+                    <div style="font-size: 0.9em; color: #666;">
+                        (${Math.round(totalMinutes)} minutes)
+                    </div>
+                </div>
+                <div style="flex: 1; border-left: 1px solid #c3e6c3; padding-left: 15px;">
+                    <div style="font-size: 1.1em; font-weight: bold; color: #27ae60;">
+                        ${currentClusters.length} work blocks
+                    </div>
+                    <div style="font-size: 0.9em; color: #666;">
+                        avg ${avgTimePerCluster.toFixed(0)} min each
+                    </div>
+                </div>
+            </div>
+        `;
     }
 
     // --- MAP SCREENSHOT CAPTURE ---
@@ -1597,17 +1649,43 @@ document.addEventListener('DOMContentLoaded', () => {
             // Create temporary markers and route for just this cluster
             const clusterColor = BASE_COLORS[clusterIndex % BASE_COLORS.length];
             
-            // Add route line FIRST (so it appears behind markers)
-            const latlngs = cluster.path.map(p => [p.lat, p.lon]);
-            const routeLine = L.polyline(latlngs, { 
-                color: clusterColor, 
-                weight: 6, 
-                opacity: 0.9, 
-                dashArray: '12, 8',
-                lineCap: 'round',
-                lineJoin: 'round'
-            });
-            routeLine.addTo(mapLayers);
+            // Add route lines - use real routes if available, otherwise straight lines
+            for (let i = 0; i < cluster.path.length - 1; i++) {
+                const fromBuilding = cluster.path[i];
+                const toBuilding = cluster.path[i + 1];
+                
+                // Check if we have real route geometry stored
+                const routeKey = `${fromBuilding.code}-${toBuilding.code}`;
+                let routeGeometry = null;
+                
+                if (window.realRoutes && window.realRoutes[routeKey]) {
+                    routeGeometry = window.realRoutes[routeKey].geometry;
+                }
+                
+                if (routeGeometry && routeGeometry.coordinates) {
+                    // Draw real route using stored geometry
+                    const coordinates = routeGeometry.coordinates.map(coord => [coord[1], coord[0]]); // flip lon,lat to lat,lon
+                    const routeLine = L.polyline(coordinates, {
+                        color: clusterColor,
+                        weight: 6,
+                        opacity: 0.9,
+                        lineCap: 'round',
+                        lineJoin: 'round'
+                    });
+                    routeLine.addTo(mapLayers);
+                } else {
+                    // Fall back to straight line
+                    const routeLine = L.polyline([[fromBuilding.lat, fromBuilding.lon], [toBuilding.lat, toBuilding.lon]], {
+                        color: clusterColor,
+                        weight: 6,
+                        opacity: 0.6,
+                        dashArray: '12, 8',
+                        lineCap: 'round',
+                        lineJoin: 'round'
+                    });
+                    routeLine.addTo(mapLayers);
+                }
+            }
             
             // Add markers with better visibility
             cluster.path.forEach((building, buildingIndex) => {
@@ -1727,7 +1805,105 @@ document.addEventListener('DOMContentLoaded', () => {
         return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
     }
 
-    function calculateTravelTime(lat1, lon1, lat2, lon2, fromCode = null, toCode = null) {
+    // Cache for OSRM routing results to avoid repeated API calls
+    const routingCache = new Map();
+
+    async function getOSRMRoute(lat1, lon1, lat2, lon2, profile = 'foot') {
+        const cacheKey = `${lat1.toFixed(6)},${lon1.toFixed(6)}-${lat2.toFixed(6)},${lon2.toFixed(6)}-${profile}`;
+        
+        if (routingCache.has(cacheKey)) {
+            return routingCache.get(cacheKey);
+        }
+
+        try {
+            const url = `https://router.project-osrm.org/route/v1/${profile}/${lon1},${lat1};${lon2},${lat2}?overview=simplified&geometries=geojson`;
+            const response = await fetch(url);
+            
+            if (!response.ok) {
+                throw new Error(`OSRM API error: ${response.status}`);
+            }
+            
+            const data = await response.json();
+            
+            if (data.routes && data.routes.length > 0) {
+                const route = data.routes[0];
+                const result = {
+                    distance: route.distance, // meters
+                    duration: route.duration / 60, // convert seconds to minutes
+                    geometry: route.geometry, // GeoJSON geometry for drawing route
+                    success: true
+                };
+                
+                routingCache.set(cacheKey, result);
+                return result;
+            } else {
+                throw new Error('No route found');
+            }
+        } catch (error) {
+            console.warn('OSRM routing failed, falling back to straight-line:', error);
+            // Fallback to straight-line calculation
+            const distance = calculateDistance(lat1, lon1, lat2, lon2);
+            const speed = profile === 'driving' ? METERS_PER_MINUTE_DRIVING : METERS_PER_MINUTE_WALKING;
+            const fallbackResult = {
+                distance: distance,
+                duration: distance / speed,
+                geometry: null,
+                success: false,
+                fallback: true
+            };
+            
+            routingCache.set(cacheKey, fallbackResult);
+            return fallbackResult;
+        }
+    }
+
+    async function calculateTravelTime(lat1, lon1, lat2, lon2, fromCode = null, toCode = null) {
+        // Check for custom travel times first
+        if (fromCode && toCode && window.customTravelTimes) {
+            const travelKey = `${fromCode}-${toCode}`;
+            if (window.customTravelTimes[travelKey]) {
+                const custom = window.customTravelTimes[travelKey];
+                return {
+                    time: custom.time,
+                    method: custom.method,
+                    distance: calculateDistance(lat1, lon1, lat2, lon2),
+                    isCustom: true,
+                    geometry: null
+                };
+            }
+        }
+        
+        // Try walking route first
+        const walkingRoute = await getOSRMRoute(lat1, lon1, lat2, lon2, 'foot');
+        const walkingTime = walkingRoute.duration;
+        
+        if (walkingTime > WALKING_THRESHOLD) {
+            // Get driving route for longer distances
+            const drivingRoute = await getOSRMRoute(lat1, lon1, lat2, lon2, 'driving');
+            const drivingTime = drivingRoute.duration + PARKING_TIME;
+            
+            return {
+                time: drivingTime,
+                method: 'drive',
+                distance: drivingRoute.distance,
+                isCustom: false,
+                geometry: drivingRoute.geometry,
+                routeData: drivingRoute
+            };
+        } else {
+            return {
+                time: walkingTime,
+                method: 'walk',
+                distance: walkingRoute.distance,
+                isCustom: false,
+                geometry: walkingRoute.geometry,
+                routeData: walkingRoute
+            };
+        }
+    }
+
+    // Legacy synchronous version for backwards compatibility
+    function calculateTravelTimeSync(lat1, lon1, lat2, lon2, fromCode = null, toCode = null) {
         // Check for custom travel times first
         if (fromCode && toCode && window.customTravelTimes) {
             const travelKey = `${fromCode}-${toCode}`;
@@ -1831,7 +2007,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!fromBuilding || !toBuilding) return;
         
         const distance = calculateDistance(fromBuilding.lat, fromBuilding.lon, toBuilding.lat, toBuilding.lon);
-        const currentTravelInfo = calculateTravelTime(fromBuilding.lat, fromBuilding.lon, toBuilding.lat, toBuilding.lon);
+        const currentTravelInfo = calculateTravelTimeSync(fromBuilding.lat, fromBuilding.lon, toBuilding.lat, toBuilding.lon);
         
         // Populate form
         document.getElementById('travel-from').value = `${fromCode} - ${fromBuilding.name}`;
@@ -2206,7 +2382,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 // Add travel time to this building (except for first building)
                 if (index > 0) {
                     const prevBuilding = cluster.path[index - 1];
-                    const travelInfo = calculateTravelTime(prevBuilding.lat, prevBuilding.lon, building.lat, building.lon, prevBuilding.code, building.code);
+                    const travelInfo = calculateTravelTimeSync(prevBuilding.lat, prevBuilding.lon, building.lat, building.lon, prevBuilding.code, building.code);
                     totalTime += travelInfo.time;
                 }
             });
@@ -2216,12 +2392,19 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // Re-render display
         displayClusters();
+        
+        // Update total time summary
+        setTimeout(() => updateTotalTimeSummary(), 100);
+        
+        // Reapply collision avoidance after display update
+        setTimeout(() => applyMarkerCollisionAvoidance(), 200);
     }
 
     // --- DISPLAY CLUSTERS FUNCTION ---
     function displayClusters() {
         summaryContentEl.innerHTML = '';
         mapLayers.clearLayers();
+        routeSegments = []; // Clear route segment references
         
         const clusterColors = generateClusterColors(currentClusters.length);
         const buildingMarkers = {};
@@ -2372,7 +2555,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 // Add travel segment (except for first building)
                 if (buildingIndex > 0) {
                     const prevBuilding = cluster.path[buildingIndex - 1];
-                    const travelInfo = calculateTravelTime(prevBuilding.lat, prevBuilding.lon, b.lat, b.lon, prevBuilding.code, b.code);
+                    const travelInfo = calculateTravelTimeSync(prevBuilding.lat, prevBuilding.lon, b.lat, b.lon, prevBuilding.code, b.code);
                     
                     const travelDiv = document.createElement('div');
                     travelDiv.className = 'travel-segment';
@@ -2413,7 +2596,19 @@ document.addEventListener('DOMContentLoaded', () => {
                         iconAnchor: [10, 10]
                     });
                     
-                    L.marker([midLat, midLon], { icon: routeStepIcon }).addTo(mapLayers);
+                    const stepMarker = L.marker([midLat, midLon], { icon: routeStepIcon }).addTo(mapLayers);
+                    
+                    // Store references for later replacement with actual routes
+                    routeSegments.push({
+                        clusterIndex: index,
+                        buildingIndex: buildingIndex,
+                        routeLine: routeSegment,
+                        stepMarker: stepMarker,
+                        fromBuilding: prevBuilding,
+                        toBuilding: b,
+                        color: color,
+                        stepNumber: stepNumber
+                    });
                 }
             });
             clusterDiv.appendChild(ul);
@@ -2447,6 +2642,290 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // Setup drag and drop after rendering
         setTimeout(() => setupDragAndDrop(), 100);
+        
+        // Apply collision detection and marker spreading after initial rendering
+        setTimeout(() => applyMarkerCollisionAvoidance(), 200);
+    }
+
+    // --- ENHANCE ROUTES WITH ACTUAL PATHS ---
+    async function enhanceRoutesWithActualPaths() {
+        // This function will replace straight-line routes with actual route geometry
+        console.log('Starting route enhancement for', routeSegments.length, 'route segments');
+        
+        for (let i = 0; i < routeSegments.length; i++) {
+            const segment = routeSegments[i];
+            
+            try {
+                // Get actual route data
+                const routeData = await calculateTravelTime(
+                    segment.fromBuilding.lat, segment.fromBuilding.lon, 
+                    segment.toBuilding.lat, segment.toBuilding.lon, 
+                    segment.fromBuilding.code, segment.toBuilding.code
+                );
+                
+                if (routeData.geometry && routeData.geometry.coordinates) {
+                    console.log(`Replacing route from ${segment.fromBuilding.code} to ${segment.toBuilding.code} with actual geometry`);
+                    
+                    // Store actual route time for sidebar updates
+                    const routeKey = `${segment.fromBuilding.code}-${segment.toBuilding.code}`;
+                    actualRouteTimes[routeKey] = routeData.time;
+                    
+                    // Remove the old straight-line route and step marker
+                    mapLayers.removeLayer(segment.routeLine);
+                    mapLayers.removeLayer(segment.stepMarker);
+                    
+                    // Create new route with actual geometry
+                    const coordinates = routeData.geometry.coordinates.map(coord => [coord[1], coord[0]]); // GeoJSON uses [lon, lat], Leaflet uses [lat, lon]
+                    
+                    const actualRoute = L.polyline(coordinates, {
+                        color: segment.color,
+                        weight: 4,
+                        opacity: 0.8,
+                        dashArray: routeData.method === 'drive' ? '10, 5' : null
+                    }).addTo(mapLayers);
+                    
+                    // Add popup with route info
+                    const routeInfo = `
+                        <b>Route: ${segment.fromBuilding.code} → ${segment.toBuilding.code}</b><br>
+                        Method: ${routeData.method === 'walk' ? 'Walking' : 'Driving'}<br>
+                        Distance: ${(routeData.distance / 1000).toFixed(2)} km<br>
+                        Time: ${routeData.time.toFixed(1)} minutes
+                    `;
+                    actualRoute.bindPopup(routeInfo);
+                    
+                    // Add step number at midpoint of actual route
+                    const midIndex = Math.floor(coordinates.length / 2);
+                    const midPoint = coordinates[midIndex];
+                    
+                    const routeStepIcon = L.divIcon({
+                        html: `<div style="background: white; color: ${segment.color}; border: 2px solid ${segment.color}; border-radius: 50%; width: 20px; height: 20px; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.3);">${segment.stepNumber - 0.5}</div>`,
+                        className: '',
+                        iconSize: [20, 20],
+                        iconAnchor: [10, 10]
+                    });
+                    
+                    L.marker(midPoint, { icon: routeStepIcon }).addTo(mapLayers);
+                } else {
+                    console.warn(`No geometry available for route from ${segment.fromBuilding.code} to ${segment.toBuilding.code}`);
+                }
+            } catch (error) {
+                console.warn(`Failed to get route geometry for ${segment.fromBuilding.code} to ${segment.toBuilding.code}:`, error);
+                // Keep the straight line if route fetching fails
+            }
+            
+            // Add a small delay to avoid overwhelming the routing service
+            await new Promise(resolve => setTimeout(resolve, 150));
+        }
+        
+        console.log('Route enhancement complete');
+        
+        // Update sidebar with actual route times
+        updateSidebarWithActualTimes();
+    }
+
+    // --- UPDATE SIDEBAR WITH ACTUAL ROUTE TIMES ---
+    function updateSidebarWithActualTimes() {
+        // Recalculate cluster times with actual route data
+        currentClusters.forEach((cluster, clusterIndex) => {
+            let totalTime = 0;
+            
+            cluster.path.forEach((building, buildingIndex) => {
+                // Add building work time
+                const inventoryTime = building.aedCount * TIME_PER_AED;
+                const gsf = typeof building.gsf === 'number' && !isNaN(building.gsf) ? building.gsf : 0;
+                const inBuildingTravelTime = gsf > 0 ? (gsf / 50000) * TIME_PER_50K_GSF : 0;
+                const aedLocationTime = building.aedLocationBuffer || AED_LOCATION_BUFFER;
+                building.totalTime = inventoryTime + inBuildingTravelTime + aedLocationTime;
+                totalTime += building.totalTime;
+                
+                // Add actual travel time (except for first building)
+                if (buildingIndex > 0) {
+                    const prevBuilding = cluster.path[buildingIndex - 1];
+                    const routeKey = `${prevBuilding.code}-${building.code}`;
+                    
+                    if (actualRouteTimes[routeKey]) {
+                        // Use actual route time
+                        totalTime += actualRouteTimes[routeKey];
+                        console.log(`Using actual time ${actualRouteTimes[routeKey].toFixed(1)} min for ${routeKey}`);
+                    } else {
+                        // Fall back to calculated time
+                        const travelInfo = calculateTravelTimeSync(prevBuilding.lat, prevBuilding.lon, building.lat, building.lon, prevBuilding.code, building.code);
+                        totalTime += travelInfo.time;
+                    }
+                }
+            });
+            
+            cluster.totalTime = totalTime;
+        });
+        
+        // Update the visual display with new times
+        updateSidebarDisplay();
+        updateTotalTimeSummary();
+    }
+
+    // --- UPDATE SIDEBAR DISPLAY ---
+    function updateSidebarDisplay() {
+        currentClusters.forEach((cluster, clusterIndex) => {
+            // Update cluster total time display
+            const clusterDiv = document.querySelector(`[data-cluster-index="${clusterIndex}"]`);
+            if (clusterDiv) {
+                const totalTimeDiv = clusterDiv.querySelector('.total-time');
+                if (totalTimeDiv) {
+                    const color = BASE_COLORS[clusterIndex % BASE_COLORS.length];
+                    totalTimeDiv.innerHTML = `Total Block Time: <span style="color: ${color};">${Math.round(cluster.totalTime)}</span> / ${MAX_CLUSTER_TIME} min`;
+                }
+            }
+            
+            // Update individual travel time displays
+            cluster.path.forEach((building, buildingIndex) => {
+                if (buildingIndex > 0) {
+                    const prevBuilding = cluster.path[buildingIndex - 1];
+                    const routeKey = `${prevBuilding.code}-${building.code}`;
+                    
+                    if (actualRouteTimes[routeKey]) {
+                        // Find and update the travel segment display
+                        const travelSegments = document.querySelectorAll('.travel-segment');
+                        travelSegments.forEach(segment => {
+                            const travelText = segment.textContent;
+                            if (travelText.includes(`Travel from ${prevBuilding.code} to ${building.code}`)) {
+                                const timeSpan = segment.querySelector('span[style*="font-weight: bold"]');
+                                if (timeSpan) {
+                                    timeSpan.textContent = `${actualRouteTimes[routeKey].toFixed(1)} min`;
+                                    // Add indicator that this is actual route time
+                                    if (!segment.querySelector('.actual-time-indicator')) {
+                                        const indicator = document.createElement('span');
+                                        indicator.className = 'actual-time-indicator';
+                                        indicator.style.cssText = 'color: #27ae60; font-weight: bold; margin-left: 5px; font-size: 0.8em;';
+                                        indicator.textContent = '✓';
+                                        indicator.title = 'Updated with actual route time';
+                                        timeSpan.parentNode.appendChild(indicator);
+                                    }
+                                }
+                            }
+                        });
+                    }
+                }
+            });
+        });
+    }
+
+    // --- MARKER COLLISION AVOIDANCE SYSTEM ---
+    function applyMarkerCollisionAvoidance() {
+        // Get all markers from the map
+        const markers = [];
+        const markerData = [];
+        
+        mapLayers.eachLayer(layer => {
+            if (layer instanceof L.Marker && layer.options.icon && layer.options.icon.options.className === 'building-marker') {
+                markers.push(layer);
+                const latLng = layer.getLatLng();
+                markerData.push({
+                    marker: layer,
+                    originalLat: latLng.lat,
+                    originalLng: latLng.lng,
+                    currentLat: latLng.lat,
+                    currentLng: latLng.lng,
+                    moved: false
+                });
+            }
+        });
+        
+        if (markers.length <= 1) return; // No collision possible with 1 or fewer markers
+        
+        // Collision detection parameters
+        const COLLISION_DISTANCE_METERS = 8; // Minimum distance between markers in meters (just enough to avoid visual overlap)
+        const MAX_ITERATIONS = 10; // Prevent infinite loops
+        const SPREAD_MULTIPLIER = 1.1; // How much to spread apart colliding markers (minimal spacing)
+        
+        // Iteratively resolve collisions
+        for (let iteration = 0; iteration < MAX_ITERATIONS; iteration++) {
+            let collisionsFound = false;
+            
+            // Check all pairs of markers for collisions
+            for (let i = 0; i < markerData.length; i++) {
+                for (let j = i + 1; j < markerData.length; j++) {
+                    const marker1 = markerData[i];
+                    const marker2 = markerData[j];
+                    
+                    const distance = calculateDistance(
+                        marker1.currentLat, marker1.currentLng,
+                        marker2.currentLat, marker2.currentLng
+                    );
+                    
+                    if (distance < COLLISION_DISTANCE_METERS) {
+                        collisionsFound = true;
+                        
+                        // Calculate midpoint between the two markers
+                        const midLat = (marker1.currentLat + marker2.currentLat) / 2;
+                        const midLng = (marker1.currentLng + marker2.currentLng) / 2;
+                        
+                        // Calculate separation vector
+                        const deltaLat = marker2.currentLat - marker1.currentLat;
+                        const deltaLng = marker2.currentLng - marker1.currentLng;
+                        
+                        // If markers are exactly on top of each other, create arbitrary separation
+                        let separationLat, separationLng;
+                        if (Math.abs(deltaLat) < 0.000001 && Math.abs(deltaLng) < 0.000001) {
+                            separationLat = 0.0001 * (Math.random() - 0.5);
+                            separationLng = 0.0001 * (Math.random() - 0.5);
+                        } else {
+                            // Normalize and scale the separation vector
+                            const length = Math.sqrt(deltaLat * deltaLat + deltaLng * deltaLng);
+                            separationLat = (deltaLat / length) * 0.0002 * SPREAD_MULTIPLIER;
+                            separationLng = (deltaLng / length) * 0.0002 * SPREAD_MULTIPLIER;
+                        }
+                        
+                        // Move markers apart from their midpoint
+                        marker1.currentLat = midLat - separationLat;
+                        marker1.currentLng = midLng - separationLng;
+                        marker2.currentLat = midLat + separationLat;
+                        marker2.currentLng = midLng + separationLng;
+                        
+                        marker1.moved = true;
+                        marker2.moved = true;
+                    }
+                }
+            }
+            
+            // If no collisions found, we're done
+            if (!collisionsFound) break;
+        }
+        
+        // Update marker positions and add connection lines for moved markers
+        markerData.forEach(data => {
+            if (data.moved) {
+                // Update marker position
+                data.marker.setLatLng([data.currentLat, data.currentLng]);
+                
+                // Add a subtle connection line from original to new position
+                const connectionLine = L.polyline([
+                    [data.originalLat, data.originalLng],
+                    [data.currentLat, data.currentLng]
+                ], {
+                    color: '#666666',
+                    weight: 1,
+                    opacity: 0.4,
+                    dashArray: '2, 4'
+                }).addTo(mapLayers);
+                
+                // Add a small dot at the original location
+                const originalLocationDot = L.circleMarker([data.originalLat, data.originalLng], {
+                    radius: 3,
+                    fillColor: '#666666',
+                    color: '#ffffff',
+                    weight: 1,
+                    opacity: 0.7,
+                    fillOpacity: 0.5
+                }).addTo(mapLayers);
+                
+                // Add tooltip to the original location dot
+                originalLocationDot.bindTooltip('Actual building location', {
+                    permanent: false,
+                    direction: 'bottom',
+                    offset: [0, 5]
+                });
+            }
+        });
     }
 
     // --- MAIN PROCESSING AND RENDERING FUNCTION ---
@@ -2499,7 +2978,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
 
                     if (nearest) {
-                        const travelInfo = calculateTravelTime(lastBuilding.lat, lastBuilding.lon, nearest.lat, nearest.lon, lastBuilding.code, nearest.code);
+                        const travelInfo = calculateTravelTimeSync(lastBuilding.lat, lastBuilding.lon, nearest.lat, nearest.lon, lastBuilding.code, nearest.code);
                         if (currentCluster.totalTime + travelInfo.time + nearest.totalTime <= MAX_CLUSTER_TIME) {
                             currentCluster.totalTime += travelInfo.time + nearest.totalTime;
                             currentCluster.path.push(nearest);
@@ -2517,6 +2996,10 @@ document.addEventListener('DOMContentLoaded', () => {
             
             loaderEl.style.display = 'none';
             displayClusters();
+            // Update total time summary after initial display
+            setTimeout(() => updateTotalTimeSummary(), 100);
+            // Enhance routes with actual geometry after initial display
+            enhanceRoutesWithActualPaths();
         }, 50);
     }
 
