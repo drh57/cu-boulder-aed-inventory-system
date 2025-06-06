@@ -1,202 +1,279 @@
 # CU Boulder AED Inventory Work Planning System
 
-A comprehensive web-based application for planning and optimizing AED (Automated External Defibrillator) inventory work at the University of Colorado Boulder campus.
+A web-based application for planning AED (Automated External Defibrillator) inventory work at CU Boulder. This system helps organize student workers' routes across campus for maximum efficiency.
 
-## 🚀 Features
+## 🎯 What This App Does
 
-- **Interactive Campus Map**: Drag-and-drop building markers with real-time coordinate updates
-- **Intelligent Clustering**: Automatically generates optimized work blocks based on time constraints
-- **Manual Control**: Full drag-and-drop reordering of buildings within and between work blocks
-- **Customizable Parameters**: Edit global variables like walking speeds, cluster times, and AED inspection times
-- **Individual Building Settings**: Custom AED counts and search buffer times per building
-- **Travel Time Editing**: Override automatic travel calculations with custom times
-- **Progress Tracking**: Visual progress bar for geocoding operations
-- **Professional PDF Reports**: Generate detailed work plans with maps and step-by-step instructions
-- **State Management**: Save/load complete application state to CSV files
-- **Building Management**: Edit, delete, and customize building information
+- **Creates Smart Routes**: Automatically groups nearby buildings into efficient work blocks
+- **Interactive Maps**: Drag and drop buildings to customize routes
+- **Time Calculations**: Estimates how long each building and route will take
+- **Professional Reports**: Generates PDF work plans with maps and step-by-step instructions
+- **Save Your Work**: Export and import your configurations
 
-## 📋 Requirements
+## 📱 Easy Setup Guide for Students
 
-- **Python 3.x** (for local web server)
-- **Modern Web Browser** (Chrome, Firefox, Safari, Edge)
-- **Internet Connection** (for map tiles and geocoding services)
+**Don't worry if you're not tech-savvy! These instructions will walk you through everything step-by-step.**
 
-## 🛠️ Setup Instructions
-
-### Quick Start (5 minutes)
-
-1. **Download the Project**
-   ```bash
-   git clone [YOUR-REPO-URL]
-   cd "CUEMS AED Building Cluster Map and Time Calculation"
-   ```
-
-2. **Start the Local Server**
-   ```bash
-   python -m http.server 8000
-   ```
-   *Note: On some systems, you may need to use `python3` instead of `python`*
-
-3. **Open in Browser**
-   - Navigate to: `http://localhost:8000/main.html`
-   - The application will load with CU Boulder building data
-
-### Alternative Setup (if Python isn't available)
-
-1. **Use any local web server** (XAMPP, WAMP, Live Server extension in VS Code, etc.)
-2. **Or open directly** - Some browsers allow opening the HTML file directly, but map features may be limited
-
-## 🎯 Quick Usage Guide
-
-### Basic Workflow
-1. **Initial Setup**: Use "Improve Building Locations" to get better GPS coordinates
-2. **Configure Settings**: Click "Edit Global Variables" to customize timing parameters
-3. **Generate Clusters**: Click "Recalculate Clusters" to create optimized work blocks
-4. **Manual Adjustments**: Drag buildings between clusters or reorder within clusters
-5. **Fine-tune Times**: Edit individual building AED counts and search buffer times
-6. **Save Work**: Use "Save State to CSV" to preserve your configuration
-7. **Generate Report**: Click "Generate PDF Report" for professional printable work plans with embedded maps
-
-### Key Controls
-- **Drag Pins**: Click and hold building markers to reposition them on the map
-- **Drag Buildings**: Use the grip handle (⋮⋮) to reorder buildings in work blocks
-- **Edit Buildings**: Click "Edit" next to any building to modify details
-- **Edit Travel**: Click "Edit" next to travel segments to customize travel times
-- **Delete Buildings**: Click "Delete" to remove buildings from work blocks
-
-## 📁 File Structure
-
-```
-├── main.html                 # Main application file (contains everything)
-├── README.md                 # This file
-├── .gitignore                # Git ignore file
-└── cu_boulder_aed_state.csv  # Saved state file (generated when you save)
-```
-
-## 💾 Data Management
-
-### Saving Your Work
-- Click **"Save State to CSV"** to export all settings, building data, and customizations
-- File downloads as `cu_boulder_aed_state.csv`
-- Move this file to your project directory for organization
-
-### Loading Previous Work
-- Click **"Load State from CSV"** to restore a previous session
-- Select your saved CSV file
-- All settings, custom coordinates, and arrangements will be restored
-
-### What Gets Saved
-- Global timing parameters
-- Building coordinates (including manual adjustments)
-- Custom AED counts and search buffer times
-- Custom travel times between buildings
-- Building addresses for PDF reports
-
-## 🎛️ Configuration Options
-
-### Global Variables (Edit Global Variables button)
-- **Max Cluster Time**: Maximum minutes per work block (default: 240)
-- **Available Workers**: Number of student workers (default: 10)
-- **Time per AED**: Minutes to inspect each device (default: 5)
-- **AED Search Buffer**: Default building search time (default: 8)
-- **Walking/Driving Speeds**: Campus travel speeds
-- **Travel Thresholds**: When to switch from walking to driving
-
-### Per-Building Settings (Edit button next to each building)
-- **AED Count**: Number of devices in this building
-- **Search Buffer**: Custom time to locate AEDs in this building
-- **Building Details**: Name, square footage, address
-
-## 📊 Understanding the Output
-
-### Work Blocks
-Each work block shows:
-- **Step Numbers**: Sequential order for visiting buildings
-- **Travel Segments**: Time and method (walk/drive) between buildings
-- **Building Times**: Total time including search, inventory, and navigation
-- **Custom Indicators**: Asterisk (*) shows buildings with custom settings
-
-### PDF Reports
-Generated reports include:
-- **Executive Summary**: Total time, buildings, and AEDs
-- **Methodology**: Detailed explanation of time calculations
-- **Step-by-Step Instructions**: Complete workflow for each work block
-- **Route Maps**: Visual representation of each work block's path with proper scaling and margins
-- **Professional Layout**: US Letter format with 0.75" margins for proper printing
-
-## 🐛 Troubleshooting
-
-### Common Issues
-
-**Map not loading?**
-- Check internet connection
-- Ensure you're using `http://localhost:8000/main.html` (not file://)
-
-**Buildings not appearing?**
-- Click "Recalculate Clusters" to regenerate
-- Check browser console for error messages
-
-**Geocoding not working?**
-- Check internet connection
-- Try reducing the number of buildings if rate-limited
-
-**PDF generation failing?**
-- Ensure you have clusters generated first
-- Check browser console for specific error messages
-- Wait for maps to fully load before generating PDF
-- If maps appear cut off, try refreshing the page and regenerating
-
-**Maps cut off in PDF?**
-- Fixed in latest version with proper scaling and margin handling
-- Maps now automatically fit to page width with consistent formatting
-- Report uses US Letter format (8.5" x 11") with 0.75" margins
-
-### Browser Compatibility
-- **Chrome/Edge**: Full functionality
-- **Firefox**: Full functionality
-- **Safari**: Full functionality
-- **Internet Explorer**: Not supported
-
-## 🤝 Collaboration
-
-### Sharing Configurations
-1. Save your state to CSV
-2. Share the CSV file with colleagues
-3. They can load it to get your exact configuration
-
-### Best Practices
-- Save state after major changes
-- Use descriptive filenames for different scenarios
-- Keep backups of working configurations
-- Document any custom changes in file names
-
-## 📝 Technical Details
-
-### Technologies Used
-- **Frontend**: HTML5, CSS3, JavaScript (ES6+)
-- **Mapping**: Leaflet.js with OpenStreetMap tiles
-- **PDF Generation**: jsPDF with html2canvas
-- **Geocoding**: Nominatim (OpenStreetMap)
-- **Server**: Python HTTP server (development)
-
-### Data Sources
-- Building coordinates: Manual geocoding and adjustments
-- Campus layout: OpenStreetMap
-- Building data: CU Boulder facilities information
-
-## 📄 License
-
-This project is for internal use at the University of Colorado Boulder. Please respect rate limits when using geocoding services.
-
-## 👥 Support
-
-For technical issues or questions:
-1. Check the troubleshooting section above
-2. Review browser console for error messages
-3. Contact the development team with specific error details
+### What You'll Need
+- A computer (Windows, Mac, or Linux)
+- Internet connection
+- About 10 minutes
 
 ---
 
-**Last Updated**: January 2025  
-**Version**: 1.0  
-**Compatibility**: Modern web browsers with JavaScript enabled 
+## 🚀 Step-by-Step Instructions
+
+### Step 1: Download Python (if you don't have it)
+
+**What is Python?** It's a programming language that will run a simple web server on your computer.
+
+#### For Windows:
+1. Go to [python.org](https://python.org)
+2. Click the big yellow "Download Python" button
+3. Run the downloaded file
+4. **IMPORTANT**: Check the box that says "Add Python to PATH" during installation
+5. Click "Install Now" and wait for it to finish
+
+#### For Mac:
+1. Go to [python.org](https://python.org)
+2. Click "Download Python for macOS"
+3. Open the downloaded file and follow the installation steps
+
+#### For Chromebook/Linux:
+Python is usually already installed! Skip to Step 2.
+
+---
+
+### Step 2: Download This Project
+
+#### Option A: Download as ZIP (Easiest)
+1. Go to the GitHub page for this project
+2. Look for a green "Code" button
+3. Click it and select "Download ZIP"
+4. Extract (unzip) the file to your Desktop
+5. You should now have a folder on your Desktop
+
+#### Option B: Using Git (if you know how)
+```bash
+git clone [GITHUB-URL-HERE]
+```
+
+---
+
+### Step 3: Open Your Computer's Terminal
+
+**What's a terminal?** It's a text-based way to give commands to your computer. Don't worry - we'll only use simple commands!
+
+#### Windows Users:
+1. Click the Start button
+2. Type "Command Prompt" or "PowerShell"
+3. Click on "Command Prompt" when it appears
+4. A black window will open - this is your terminal!
+
+#### Mac Users:
+1. Press `Cmd + Space` to open Spotlight
+2. Type "Terminal"
+3. Press Enter
+4. A window will open - this is your terminal!
+
+#### Chromebook Users:
+1. Press `Ctrl + Alt + T` to open the terminal
+2. Type `shell` and press Enter
+
+---
+
+### Step 4: Navigate to Your Project Folder
+
+In your terminal, you need to "go to" the folder where you downloaded the project.
+
+#### If you put it on your Desktop:
+
+**Windows:**
+```
+cd Desktop
+cd "cu-boulder-aed-inventory-system"
+```
+
+**Mac:**
+```
+cd Desktop
+cd "cu-boulder-aed-inventory-system"
+```
+
+**Tip**: If the folder has a different name, replace "cu-boulder-aed-inventory-system" with whatever your folder is actually called.
+
+---
+
+### Step 5: Start the Web Server
+
+Copy and paste this command into your terminal and press Enter:
+
+```
+python -m http.server 8000
+```
+
+**If that doesn't work, try:**
+```
+python3 -m http.server 8000
+```
+
+**What you should see:**
+The terminal will display something like:
+```
+Serving HTTP on :: port 8000 (http://[::]:8000/) ...
+```
+
+**🎉 Success!** Your web server is now running!
+
+**Important**: Keep this terminal window open while using the app. If you close it, the app will stop working.
+
+---
+
+### Step 6: Open the App in Your Browser
+
+1. Open your web browser (Chrome, Firefox, Safari, etc.)
+2. In the address bar, type exactly: `http://localhost:8000/main.html`
+3. Press Enter
+
+**🎉 The app should now load!** You'll see a map of CU Boulder with building markers.
+
+---
+
+## 🎮 How to Use the App
+
+### Basic Workflow:
+1. **First time setup**: Click "Improve Building Locations" to get better GPS coordinates
+2. **Create work blocks**: Click "Recalculate Clusters" to automatically group buildings
+3. **Customize routes**: Drag buildings between groups or reorder them
+4. **Generate reports**: Click "Generate PDF Report" to create printable work plans
+
+### Key Features:
+- **Drag the map pins**: Click and hold to move building locations
+- **Drag buildings in lists**: Use the ⋮⋮ handle to reorder buildings
+- **Edit building details**: Click "Edit" next to any building
+- **Save your work**: Click "Save State to CSV" to backup your configuration
+
+---
+
+## 📄 Generating Work Reports
+
+1. Make sure you have work blocks created (see "Recalculate Clusters")
+2. Click "Generate PDF Report"
+3. Wait a few moments for the PDF to generate
+4. The report will automatically download to your computer
+5. Print or share the PDF with your team!
+
+---
+
+## 🆘 Troubleshooting
+
+### "Command not found" error:
+- **Windows**: Make sure you checked "Add Python to PATH" during installation
+- **Mac/Linux**: Try using `python3` instead of `python`
+
+### App won't load in browser:
+- Make sure the terminal is still running (you should see the "Serving HTTP" message)
+- Check that you typed the address correctly: `http://localhost:8000/main.html`
+- Try refreshing the page
+
+### Maps not showing:
+- Check your internet connection
+- Try refreshing the page
+- Some firewalls block map tiles - try from a different network
+
+### PDF generation not working:
+- Make sure you clicked "Recalculate Clusters" first
+- Wait for all maps to fully load before generating PDF
+- Try refreshing the page and trying again
+
+### Still having problems?
+- Close the terminal window
+- Start over from Step 4
+- Make sure you're in the right folder
+
+---
+
+## 🔄 Saving and Sharing Your Work
+
+### To Save Your Configuration:
+1. Click "Save State to CSV"
+2. A file will download to your computer
+3. Keep this file safe - it contains all your customizations!
+
+### To Load a Previous Configuration:
+1. Click "Load State from CSV"
+2. Select the file you saved earlier
+3. Everything will be restored exactly as you left it
+
+### To Share with Others:
+1. Save your state to CSV
+2. Send the CSV file to your colleague
+3. They can load it to see your exact setup
+
+---
+
+## 💡 Tips for Success
+
+- **Start simple**: Generate clusters first, then customize
+- **Save often**: Use "Save State to CSV" after making major changes
+- **Test your routes**: Look at the generated maps to make sure they make sense
+- **Print reports**: The PDF reports are designed to be printed and taken into the field
+- **Ask for help**: If you get stuck, ask someone who's more tech-savvy to help with the setup
+
+---
+
+**Questions?** The terminal window will show any error messages. If something goes wrong, try closing everything and starting over from Step 4.
+
+## 📋 Advanced Features (Optional)
+
+*These features are for users who want to customize the system further:*
+
+### Edit Global Variables
+- Click "Edit Global Variables" to adjust timing assumptions
+- Change walking speeds, AED inspection times, etc.
+- Reset to defaults if needed
+
+### Custom Building Settings
+- Click "Edit" next to any building to modify details
+- Adjust AED counts or search times for specific buildings
+- Add building addresses for better PDF reports
+
+### Travel Time Overrides
+- Click "Edit" next to travel segments to set custom times
+- Force walking or driving for specific routes
+- Useful for buildings with special access requirements
+
+---
+
+## 📁 What's in This Project
+
+When you download the project, you'll get:
+- `main.html` - The complete application (this is the only file you need!)
+- `README.md` - These instructions
+- Some sample files showing what the system can generate
+
+---
+
+## 🏫 About This System
+
+This tool was created to help CU Boulder organize AED inventory work efficiently. It:
+- Groups nearby buildings to minimize travel time
+- Estimates realistic time requirements for each task
+- Generates professional reports for field teams
+- Saves time and improves inventory accuracy
+
+The system assumes each AED inspection takes about 5 minutes, plus time to locate devices in each building and travel between locations.
+
+---
+
+**Need Help?** 
+- Try the troubleshooting section above
+- Ask a tech-savvy friend to help with the initial setup
+- The terminal window will show error messages if something goes wrong
+
+**Questions about the AED inventory process itself?** 
+Contact the CU Boulder Division of Public Safety.
+
+---
+
+*Last Updated: January 2025* 
