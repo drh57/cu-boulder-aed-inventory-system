@@ -636,6 +636,16 @@ document.addEventListener('DOMContentLoaded', () => {
     let manuallyArranged = false;
     let routeSegments = []; // Store references to route segments for replacement
     let actualRouteTimes = {}; // Store actual route times for sidebar updates
+    
+    // Rectangle selection variables
+    let isSelecting = false;
+    let selectionStartPoint = null;
+    let selectionRectangle = null;
+    let selectedMarkers = new Set();
+    let isDraggingGroup = false;
+    
+    // Cluster visibility tracking
+    let clusterVisibility = {}; // Track which clusters are visible
 
     // --- GEOCODING FUNCTION ---
     async function geocodeBuilding(buildingName, code) {
@@ -1536,13 +1546,19 @@ document.addEventListener('DOMContentLoaded', () => {
         pdfBtn.addEventListener('mouseout', () => pdfBtn.style.backgroundColor = '#8e44ad');
         
         pdfBtn.addEventListener('click', async () => {
-                         // currentClusters is now a global variable
             if (currentClusters && currentClusters.length > 0) {
-                pdfBtn.textContent = 'Generating PDF...';
+                const visibleClusters = getVisibleClusters();
+                
+                if (visibleClusters.length === 0) {
+                    alert('Please make at least one cluster visible before generating a PDF report!');
+                    return;
+                }
+                
+                pdfBtn.textContent = `Generating PDF for ${visibleClusters.length} cluster(s)...`;
                 pdfBtn.disabled = true;
                 
                 try {
-                    await generatePDFReport(currentClusters);
+                    await generatePDFReport(visibleClusters);
                     pdfBtn.textContent = 'PDF Generated!';
                     setTimeout(() => {
                         pdfBtn.textContent = 'Generate PDF Report';
@@ -1585,9 +1601,10 @@ document.addEventListener('DOMContentLoaded', () => {
         const summaryDiv = document.getElementById('total-time-summary');
         if (!summaryDiv || !currentClusters || currentClusters.length === 0) return;
         
-        const totalMinutes = currentClusters.reduce((sum, cluster) => sum + (cluster.totalTime || 0), 0);
+        const visibleClusters = getVisibleClusters();
+        const totalMinutes = visibleClusters.reduce((sum, cluster) => sum + (cluster.totalTime || 0), 0);
         const totalHours = totalMinutes / 60;
-        const avgTimePerCluster = totalMinutes / currentClusters.length;
+        const avgTimePerCluster = visibleClusters.length > 0 ? totalMinutes / visibleClusters.length : 0;
         
         summaryDiv.innerHTML = `
             <div style="font-weight: bold; font-size: 1.1em; color: #2c5234; margin-bottom: 8px;">
@@ -1604,10 +1621,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 </div>
                 <div style="flex: 1; border-left: 1px solid #c3e6c3; padding-left: 15px;">
                     <div style="font-size: 1.1em; font-weight: bold; color: #27ae60;">
-                        ${currentClusters.length} work blocks
+                        ${visibleClusters.length} visible blocks
                     </div>
                     <div style="font-size: 0.9em; color: #666;">
-                        avg ${avgTimePerCluster.toFixed(0)} min each
+                        ${visibleClusters.length !== currentClusters.length ? `(${currentClusters.length - visibleClusters.length} hidden) ` : ''}avg ${avgTimePerCluster.toFixed(0)} min each
                     </div>
                 </div>
             </div>
@@ -2415,15 +2432,42 @@ document.addEventListener('DOMContentLoaded', () => {
             clusterDiv.className = 'cluster';
             clusterDiv.style.borderColor = color;
             clusterDiv.dataset.clusterIndex = index;
+            
+            // Initialize visibility state if not set
+            if (clusterVisibility[index] === undefined) {
+                clusterVisibility[index] = true;
+            }
+            
+            // Add visual styling for hidden clusters
+            const isClusterVisible = clusterVisibility[index] !== false;
+            if (!isClusterVisible) {
+                clusterDiv.style.opacity = '0.6';
+                clusterDiv.style.background = '#f5f5f5';
+            }
 
             const headerDiv = document.createElement('div');
             headerDiv.className = 'cluster-header';
             headerDiv.style.backgroundColor = color;
-            headerDiv.textContent = `Work Block ${index + 1}`;
+            headerDiv.style.display = 'flex';
+            headerDiv.style.justifyContent = 'space-between';
+            headerDiv.style.alignItems = 'center';
+            
+            headerDiv.innerHTML = `
+                <span>Work Block ${index + 1}</span>
+                <div style="display: flex; gap: 5px; align-items: center;">
+                    <button 
+                        onclick="toggleClusterVisibility(${index})"
+                        style="background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.5); border-radius: 4px; color: white; padding: 4px 8px; font-size: 0.8em; cursor: pointer; transition: all 0.2s;"
+                        title="${clusterVisibility[index] ? 'Hide this cluster' : 'Show this cluster'}"
+                    >
+                        ${clusterVisibility[index] ? '👁️ Hide' : '👁️‍🗨️ Show'}
+                    </button>
+                </div>
+            `;
             clusterDiv.appendChild(headerDiv);
             
             const ul = document.createElement('ul');
-
+            
             cluster.path.forEach((b, buildingIndex) => {
                 const stepNumber = buildingIndex + 1;
                 
@@ -2438,10 +2482,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 li.innerHTML = `
                     <span class="drag-handle">⋮⋮</span>
                     <span class="step-number">${stepNumber}</span>
-                    <span class="building-name">${b.code} - ${b.name}${customIndicator}</span>
+                    <span class="building-name">${b.code} - ${b.name}${customIndicator}${b.locationQuestionable ? '<span style="color: #e74c3c; font-weight: bold; margin-left: 5px;" title="Location marked as questionable">❓</span>' : ''}</span>
                     <div class="building-controls">
                         <span class="building-time">${Math.round(b.totalTime)} min</span>
                         <button class="edit-btn" onclick="window.editBuilding('${b.code}')">Edit</button>
+                        <button class="question-btn" onclick="window.toggleQuestionable('${b.code}')" style="padding: 2px 6px; font-size: 0.7em; border: none; border-radius: 3px; cursor: pointer; transition: background-color 0.2s; background-color: ${b.locationQuestionable ? '#e74c3c' : '#f39c12'}; color: white;" title="${b.locationQuestionable ? 'Mark as confirmed location' : 'Mark location as questionable'}">?</button>
                         <button class="delete-btn" onclick="window.deleteBuilding('${b.code}', ${index})">Delete</button>
                     </div>`;
                 li.addEventListener('click', (e) => {
@@ -2453,11 +2498,16 @@ document.addEventListener('DOMContentLoaded', () => {
                 ul.appendChild(li);
 
                 // Create custom marker with integrated step number
+                const questionableOverlay = b.locationQuestionable ? 
+                    `<div style="position: absolute; top: -5px; right: -5px; background: #e74c3c; color: white; border-radius: 50%; width: 16px; height: 16px; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: bold; z-index: 10; box-shadow: 0 1px 3px rgba(0,0,0,0.3);">?</div>` : 
+                    '';
+                
                 const combinedIcon = L.divIcon({
                     html: `
                         <div style="position: relative; width: 28px; height: 28px;">
                             <div style="background: ${color}; border: 3px solid white; border-radius: 50%; width: 28px; height: 28px; box-shadow: 0 2px 6px rgba(0,0,0,0.3); cursor: grab;"></div>
                             <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: white; font-weight: bold; font-size: 12px; pointer-events: none;">${stepNumber}</div>
+                            ${questionableOverlay}
                         </div>
                     `,
                     className: 'building-marker',
@@ -2468,7 +2518,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 const marker = L.marker([b.lat, b.lon], { 
                     icon: combinedIcon,
                     draggable: true
-                }).addTo(mapLayers);
+                });
+                
+                // Only add to map if cluster is visible
+                if (isClusterVisible) {
+                    marker.addTo(mapLayers);
+                }
 
                 // Create popup content
                 const popupContent = `<b>${b.name} (${b.code})</b><br>Address: ${getBuildingAddress(b.code, b.name)}<br>Work Block: ${index + 1}<br>Step: ${stepNumber}`;
@@ -2583,7 +2638,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         weight: 4, 
                         opacity: 0.8, 
                         dashArray: travelInfo.method === 'drive' ? '10, 5' : null
-                    }).addTo(mapLayers);
+                    });
                     
                     // Add step number at midpoint of route
                     const midLat = (routeStart[0] + routeEnd[0]) / 2;
@@ -2596,7 +2651,13 @@ document.addEventListener('DOMContentLoaded', () => {
                         iconAnchor: [10, 10]
                     });
                     
-                    const stepMarker = L.marker([midLat, midLon], { icon: routeStepIcon }).addTo(mapLayers);
+                    const stepMarker = L.marker([midLat, midLon], { icon: routeStepIcon });
+                    
+                    // Only add to map if cluster is visible
+                    if (isClusterVisible) {
+                        routeSegment.addTo(mapLayers);
+                        stepMarker.addTo(mapLayers);
+                    }
                     
                     // Store references for later replacement with actual routes
                     routeSegments.push({
@@ -2627,24 +2688,361 @@ document.addEventListener('DOMContentLoaded', () => {
             )
         );
         
-        if (hasAnyCustomSettings) {
+        const hasQuestionableLocations = currentClusters.some(cluster =>
+            cluster.path.some(building => building.locationQuestionable)
+        );
+        
+        if (hasAnyCustomSettings || hasQuestionableLocations) {
             const legendDiv = document.createElement('div');
             legendDiv.style.cssText = `
                 margin-top: 15px; padding: 10px; background: #f8f9fa; border-radius: 5px;
                 border-left: 4px solid #e67e22; font-size: 0.85em; color: #6c757d;
             `;
-            legendDiv.innerHTML = `
-                <strong style="color: #e67e22;">Legend:</strong><br>
-                <span style="color: #e67e22; font-weight: bold;">*</span> = Building has custom AED search buffer time
-            `;
+            
+            let legendContent = '<strong style="color: #e67e22;">Legend:</strong><br>';
+            
+            if (hasAnyCustomSettings) {
+                legendContent += '<span style="color: #e67e22; font-weight: bold;">*</span> = Building has custom AED search buffer time<br>';
+            }
+            
+            if (hasQuestionableLocations) {
+                legendContent += '<span style="color: #e74c3c; font-weight: bold;">❓</span> = Location marked as questionable<br>';
+            }
+            
+            legendDiv.innerHTML = legendContent;
             summaryContentEl.appendChild(legendDiv);
         }
+        
+        // Add cluster visibility controls
+        addClusterVisibilityControls();
         
         // Setup drag and drop after rendering
         setTimeout(() => setupDragAndDrop(), 100);
         
         // Apply collision detection and marker spreading after initial rendering
         setTimeout(() => applyMarkerCollisionAvoidance(), 200);
+        
+        // Setup rectangle selection after rendering
+        setupRectangleSelection();
+    }
+
+    // --- ADD CLUSTER VISIBILITY CONTROLS ---
+    function addClusterVisibilityControls() {
+        const existingControls = document.getElementById('cluster-visibility-controls');
+        if (existingControls) {
+            existingControls.remove();
+        }
+        
+        const controlsDiv = document.createElement('div');
+        controlsDiv.id = 'cluster-visibility-controls';
+        controlsDiv.style.cssText = `
+            margin-bottom: 15px; padding: 10px; background: #e8f4fd; border: 1px solid #b3d9ff; 
+            border-radius: 5px; text-align: center;
+        `;
+        
+        const visibleClusters = getVisibleClusters();
+        const allVisible = visibleClusters.length === currentClusters.length;
+        
+        controlsDiv.innerHTML = `
+            <div style="font-weight: bold; margin-bottom: 8px; color: #0066cc;">
+                Cluster Visibility (${visibleClusters.length}/${currentClusters.length} visible)
+            </div>
+            <button onclick="toggleAllClusters(${allVisible ? 'false' : 'true'})" 
+                    style="background: #0066cc; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; margin-right: 8px;">
+                ${allVisible ? 'Hide All' : 'Show All'}
+            </button>
+            <span style="font-size: 0.85em; color: #666;">
+                Use individual cluster buttons to show/hide specific work blocks<br>
+                <strong>Tip:</strong> Hold <kbd style="background: #f1f1f1; padding: 1px 4px; border-radius: 2px; font-size: 0.9em;">Shift</kbd> + drag on map to select multiple markers
+            </span>
+        `;
+        
+        // Insert before the first cluster
+        const firstCluster = summaryContentEl.querySelector('.cluster');
+        if (firstCluster) {
+            summaryContentEl.insertBefore(controlsDiv, firstCluster);
+        } else {
+            summaryContentEl.appendChild(controlsDiv);
+        }
+    }
+
+    // --- TOGGLE ALL CLUSTERS ---
+    window.toggleAllClusters = function(showAll) {
+        currentClusters.forEach((cluster, index) => {
+            clusterVisibility[index] = showAll;
+        });
+        
+        displayClusters();
+        
+        setTimeout(() => {
+            applyMarkerCollisionAvoidance();
+            setupRectangleSelection();
+            updateTotalTimeSummary();
+        }, 200);
+    };
+
+    // --- RECTANGLE SELECTION SYSTEM ---
+    function setupRectangleSelection() {
+        // Clear any existing event listeners
+        map.off('mousedown');
+        map.off('mousemove');
+        map.off('mouseup');
+        
+        let startLatLng = null;
+        
+        map.on('mousedown', function(e) {
+            // Only start selection if Shift key is held down and clicking on empty map (not on a marker)
+            if (!e.originalEvent.shiftKey || 
+                e.originalEvent.target.tagName.toLowerCase() !== 'div' || 
+                e.originalEvent.target.closest('.leaflet-marker-icon')) {
+                return;
+            }
+            
+            isSelecting = true;
+            startLatLng = e.latlng;
+            selectionStartPoint = map.latLngToContainerPoint(e.latlng);
+            
+            // Clear previous selection
+            clearSelection();
+            
+            e.originalEvent.preventDefault();
+        });
+        
+        map.on('mousemove', function(e) {
+            if (!isSelecting || !startLatLng) return;
+            
+            const currentPoint = map.latLngToContainerPoint(e.latlng);
+            
+            // Remove existing selection rectangle
+            if (selectionRectangle) {
+                map.removeLayer(selectionRectangle);
+            }
+            
+            // Create selection rectangle
+            const bounds = L.latLngBounds(startLatLng, e.latlng);
+            selectionRectangle = L.rectangle(bounds, {
+                color: '#007bff',
+                weight: 2,
+                opacity: 0.8,
+                fillOpacity: 0.1,
+                dashArray: '5, 5'
+            }).addTo(map);
+        });
+        
+        map.on('mouseup', function(e) {
+            if (!isSelecting || !startLatLng) return;
+            
+            const endLatLng = e.latlng;
+            const bounds = L.latLngBounds(startLatLng, endLatLng);
+            
+            // Find markers within selection
+            mapLayers.eachLayer(layer => {
+                if (layer instanceof L.Marker && layer.options.icon && 
+                    layer.options.icon.options.className === 'building-marker') {
+                    const markerLatLng = layer.getLatLng();
+                    if (bounds.contains(markerLatLng)) {
+                        selectedMarkers.add(layer);
+                        highlightSelectedMarker(layer);
+                    }
+                }
+            });
+            
+            // Clean up
+            if (selectionRectangle) {
+                map.removeLayer(selectionRectangle);
+                selectionRectangle = null;
+            }
+            
+            isSelecting = false;
+            startLatLng = null;
+            
+            if (selectedMarkers.size > 0) {
+                console.log(`Selected ${selectedMarkers.size} markers`);
+                setupGroupDragging();
+            }
+        });
+    }
+    
+    function clearSelection() {
+        selectedMarkers.forEach(marker => {
+            unhighlightSelectedMarker(marker);
+        });
+        selectedMarkers.clear();
+        isDraggingGroup = false;
+    }
+    
+    function highlightSelectedMarker(marker) {
+        // Add a blue border to selected markers
+        const icon = marker.getIcon();
+        if (icon && icon.options.html) {
+            const newHtml = icon.options.html.replace(
+                'border: 3px solid white;',
+                'border: 3px solid #007bff; box-shadow: 0 0 10px #007bff;'
+            );
+            const newIcon = L.divIcon({
+                html: newHtml,
+                className: icon.options.className,
+                iconSize: icon.options.iconSize,
+                iconAnchor: icon.options.iconAnchor
+            });
+            marker.setIcon(newIcon);
+        }
+    }
+    
+    function unhighlightSelectedMarker(marker) {
+        // Remove blue border from deselected markers
+        const icon = marker.getIcon();
+        if (icon && icon.options.html) {
+            const newHtml = icon.options.html.replace(
+                /border: 3px solid #007bff; box-shadow: 0 0 10px #007bff;/g,
+                'border: 3px solid white;'
+            );
+            const newIcon = L.divIcon({
+                html: newHtml,
+                className: icon.options.className,
+                iconSize: icon.options.iconSize,
+                iconAnchor: icon.options.iconAnchor
+            });
+            marker.setIcon(newIcon);
+        }
+    }
+    
+    function setupGroupDragging() {
+        selectedMarkers.forEach(marker => {
+            marker.off('dragstart');
+            marker.off('drag');
+            marker.off('dragend');
+            
+            marker.on('dragstart', function(e) {
+                isDraggingGroup = true;
+                document.body.style.cursor = 'grabbing';
+            });
+            
+            marker.on('drag', function(e) {
+                if (!isDraggingGroup) return;
+                
+                const draggedMarker = e.target;
+                const draggedLatLng = draggedMarker.getLatLng();
+                const originalLatLng = draggedMarker._originalPosition || draggedLatLng;
+                
+                if (!draggedMarker._originalPosition) {
+                    draggedMarker._originalPosition = originalLatLng;
+                }
+                
+                const deltaLat = draggedLatLng.lat - originalLatLng.lat;
+                const deltaLng = draggedLatLng.lng - originalLatLng.lng;
+                
+                // Move other selected markers
+                selectedMarkers.forEach(otherMarker => {
+                    if (otherMarker !== draggedMarker) {
+                        const otherOriginal = otherMarker._originalPosition || otherMarker.getLatLng();
+                        if (!otherMarker._originalPosition) {
+                            otherMarker._originalPosition = otherOriginal;
+                        }
+                        
+                        const newLatLng = L.latLng(
+                            otherOriginal.lat + deltaLat,
+                            otherOriginal.lng + deltaLng
+                        );
+                        otherMarker.setLatLng(newLatLng);
+                    }
+                });
+            });
+            
+            marker.on('dragend', function(e) {
+                if (!isDraggingGroup) return;
+                
+                // Update building data for all moved markers
+                selectedMarkers.forEach(movedMarker => {
+                    const newLatLng = movedMarker.getLatLng();
+                    
+                    // Find the building data and update coordinates
+                    const markerHtml = movedMarker.getIcon().options.html;
+                    const stepMatch = markerHtml.match(/>(\\d+)</);
+                    if (stepMatch) {
+                        const stepNumber = parseInt(stepMatch[1]);
+                        
+                        // Find the building in current clusters
+                        currentClusters.forEach(cluster => {
+                            if (cluster.path[stepNumber - 1]) {
+                                const building = cluster.path[stepNumber - 1];
+                                const buildingToUpdate = buildingData.find(bd => bd.code === building.code);
+                                if (buildingToUpdate) {
+                                    buildingToUpdate.lat = newLatLng.lat;
+                                    buildingToUpdate.lon = newLatLng.lng;
+                                }
+                                building.lat = newLatLng.lat;
+                                building.lon = newLatLng.lng;
+                            }
+                        });
+                    }
+                    
+                    movedMarker._originalPosition = null;
+                });
+                
+                document.body.style.cursor = '';
+                isDraggingGroup = false;
+                
+                // Clear selection after drag
+                setTimeout(() => {
+                    clearSelection();
+                    recalculateTimesOnly();
+                }, 100);
+                         });
+         });
+     }
+
+    // --- QUESTIONABLE LOCATION SYSTEM ---
+    window.toggleQuestionable = function(buildingCode) {
+        console.log('Toggle questionable called for:', buildingCode);
+        
+        // Find building in buildingData
+        const building = buildingData.find(b => b.code === buildingCode);
+        if (building) {
+            building.locationQuestionable = !building.locationQuestionable;
+            console.log(`Building ${buildingCode} questionable status: ${building.locationQuestionable}`);
+        }
+        
+        // Find building in current clusters and update
+        currentClusters.forEach(cluster => {
+            cluster.path.forEach(b => {
+                if (b.code === buildingCode) {
+                    b.locationQuestionable = building.locationQuestionable;
+                }
+            });
+        });
+        
+        // Refresh display to show changes
+        displayClusters();
+        
+        // Reapply collision avoidance and selection
+        setTimeout(() => {
+            applyMarkerCollisionAvoidance();
+            setupRectangleSelection();
+        }, 200);
+    };
+
+    // --- CLUSTER VISIBILITY SYSTEM ---
+    window.toggleClusterVisibility = function(clusterIndex) {
+        console.log('Toggling visibility for cluster', clusterIndex);
+        
+        // Toggle visibility state
+        clusterVisibility[clusterIndex] = !clusterVisibility[clusterIndex];
+        
+        // Refresh display to show/hide cluster elements
+        displayClusters();
+        
+        // Reapply other systems
+        setTimeout(() => {
+            applyMarkerCollisionAvoidance();
+            setupRectangleSelection();
+            updateTotalTimeSummary();
+        }, 200);
+    };
+
+    // Get visible clusters for PDF generation
+    function getVisibleClusters() {
+        return currentClusters.filter((cluster, index) => clusterVisibility[index] !== false);
     }
 
     // --- ENHANCE ROUTES WITH ACTUAL PATHS ---
