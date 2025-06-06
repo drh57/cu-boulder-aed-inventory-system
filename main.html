@@ -797,7 +797,91 @@ document.addEventListener('DOMContentLoaded', () => {
             processAndDisplayData();
         });
         
+        // Add auto-geocode button for missing locations
+        const autoGeocodeBtn = document.createElement('button');
+        autoGeocodeBtn.id = 'auto-geocode-btn';
+        autoGeocodeBtn.textContent = '🔍 Auto-Geocode Missing Locations';
+        autoGeocodeBtn.style.cssText = `
+            display: block; width: 100%; padding: 8px; font-size: 0.9em; font-weight: bold;
+            background-color: #2e7d32; color: white; border: none; border-radius: 5px;
+            cursor: pointer; margin-bottom: 8px; transition: background-color 0.2s;
+        `;
+        autoGeocodeBtn.addEventListener('mouseover', () => {
+            if (!autoGeocodeBtn.disabled) autoGeocodeBtn.style.backgroundColor = '#1b5e20';
+        });
+        autoGeocodeBtn.addEventListener('mouseout', () => {
+            if (!autoGeocodeBtn.disabled) autoGeocodeBtn.style.backgroundColor = '#2e7d32';
+        });
+        
+        autoGeocodeBtn.addEventListener('click', async () => {
+            const buildingsNeedingGeocode = buildingData.filter(b => 
+                !buildingAddresses[b.code] || buildingAddresses[b.code].trim() === ''
+            );
+            
+            if (buildingsNeedingGeocode.length === 0) {
+                alert('All buildings already have addresses! Use the "Improve Building Locations" button to re-geocode existing addresses.');
+                return;
+            }
+            
+            const proceed = confirm(`Found ${buildingsNeedingGeocode.length} buildings without addresses. Would you like to automatically geocode them using their building names?\n\nThis will:\n• Search for each building by name\n• Set coordinates if found\n• Update addresses with results\n\nThis may take a few minutes.`);
+            
+            if (!proceed) return;
+            
+            autoGeocodeBtn.textContent = '🔄 Auto-Geocoding...';
+            autoGeocodeBtn.disabled = true;
+            autoGeocodeBtn.style.backgroundColor = '#6c757d';
+            autoGeocodeBtn.style.cursor = 'not-allowed';
+            
+            let processed = 0;
+            let improved = 0;
+            
+            for (const building of buildingsNeedingGeocode) {
+                processed++;
+                autoGeocodeBtn.textContent = `🔄 Geocoding ${processed}/${buildingsNeedingGeocode.length}`;
+                
+                try {
+                    // Try geocoding with building name + "Boulder CO" for better results
+                    const searchTerm = `${building.name}, Boulder, CO`;
+                    const result = await geocodeAddress(searchTerm);
+                    
+                    if (result) {
+                        building.lat = result.lat;
+                        building.lon = result.lon;
+                        buildingAddresses[building.code] = result.display_name || searchTerm;
+                        improved++;
+                        console.log(`✅ Geocoded ${building.code}: ${result.lat}, ${result.lon}`);
+                    } else {
+                        console.log(`❌ Could not geocode ${building.code}: ${building.name}`);
+                    }
+                } catch (error) {
+                    console.error(`Error geocoding ${building.code}:`, error);
+                }
+                
+                // Respectful delay for geocoding service
+                await new Promise(resolve => setTimeout(resolve, 800));
+            }
+            
+            autoGeocodeBtn.textContent = `✅ Geocoded ${improved} buildings`;
+            autoGeocodeBtn.style.backgroundColor = '#28a745';
+            
+            // Reset button after delay
+            setTimeout(() => {
+                autoGeocodeBtn.textContent = '🔍 Auto-Geocode Missing Locations';
+                autoGeocodeBtn.disabled = false;
+                autoGeocodeBtn.style.backgroundColor = '#2e7d32';
+                autoGeocodeBtn.style.cursor = 'pointer';
+            }, 3000);
+            
+            if (improved > 0) {
+                alert(`✅ Successfully geocoded ${improved} out of ${buildingsNeedingGeocode.length} buildings!\n\nThe map will now refresh with updated locations.`);
+                processAndDisplayData();
+            } else {
+                alert('❌ Could not geocode any buildings. You may need to add addresses manually using the Edit button for each building.');
+            }
+        });
+        
         geocodeContainer.appendChild(geocodeBtn);
+        geocodeContainer.appendChild(autoGeocodeBtn);
         geocodeContainer.appendChild(progressContainer);
         document.querySelector('.summary-header').appendChild(geocodeContainer);
     }
@@ -2083,6 +2167,57 @@ document.addEventListener('DOMContentLoaded', () => {
         };
     };
 
+    // --- GEOCODING FUNCTIONALITY ---
+    async function geocodeAddress(address) {
+        if (!address || address.trim() === '') {
+            alert('Please enter an address to geocode.');
+            return null;
+        }
+        
+        try {
+            // Use OpenStreetMap's Nominatim service for geocoding
+            const encodedAddress = encodeURIComponent(address.trim());
+            const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodedAddress}&limit=1&addressdetails=1`);
+            
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            
+            const data = await response.json();
+            
+            if (data && data.length > 0) {
+                const result = data[0];
+                return {
+                    lat: parseFloat(result.lat),
+                    lon: parseFloat(result.lon),
+                    display_name: result.display_name,
+                    address: result.display_name
+                };
+            } else {
+                throw new Error('No results found for this address');
+            }
+        } catch (error) {
+            console.error('Geocoding error:', error);
+            alert(`Could not find location for "${address}". Please check the address or enter coordinates manually.\n\nError: ${error.message}`);
+            return null;
+        }
+    }
+
+    // Function to set default location if coordinates are missing
+    function setDefaultLocation(building) {
+        // Boulder, CO campus center as default
+        const DEFAULT_LAT = 40.0075;
+        const DEFAULT_LON = -105.2659;
+        
+        if (!building.lat || !building.lon || building.lat === 0 || building.lon === 0) {
+            console.log(`Setting default location for building ${building.code}`);
+            building.lat = DEFAULT_LAT;
+            building.lon = DEFAULT_LON;
+        }
+        
+        return building;
+    }
+
     // --- BUILDING EDITING FUNCTIONALITY ---
     function createEditModal() {
         const modal = document.createElement('div');
@@ -2125,8 +2260,32 @@ document.addEventListener('DOMContentLoaded', () => {
                     <div id="time-preview" style="margin-top: 5px; font-family: monospace; font-size: 0.9em;"></div>
                 </div>
                 <div style="margin-bottom: 15px;">
-                    <label style="display: block; margin-bottom: 5px; font-weight: bold;">Address (for PDF):</label>
-                    <input type="text" id="edit-address" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                    <label style="display: block; margin-bottom: 5px; font-weight: bold; color: #2e7d32;">📍 Building Address:</label>
+                    <input type="text" id="edit-address" placeholder="Enter building address (e.g., 1234 Colorado Ave, Boulder, CO)" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                    <small style="color: #6c757d; font-size: 0.8em;">Address will be used for PDF reports and automatic location lookup</small>
+                    <button type="button" id="geocode-address" style="margin-top: 5px; padding: 6px 12px; background: #2e7d32; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.8em;">🔍 Find Location</button>
+                </div>
+                
+                <div style="display: flex; gap: 15px; margin-bottom: 15px; background: #f8f9fa; padding: 12px; border-radius: 5px; border-left: 4px solid #2e7d32;">
+                    <div style="flex: 1;">
+                        <label style="display: block; margin-bottom: 5px; font-weight: bold; color: #2e7d32;">📍 Latitude:</label>
+                        <input type="number" id="edit-lat" step="0.000001" placeholder="e.g., 40.0150" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                        <small style="color: #6c757d; font-size: 0.8em;">Decimal degrees (North)</small>
+                    </div>
+                    <div style="flex: 1;">
+                        <label style="display: block; margin-bottom: 5px; font-weight: bold; color: #2e7d32;">📍 Longitude:</label>
+                        <input type="number" id="edit-lon" step="0.000001" placeholder="e.g., -105.2705" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                        <small style="color: #6c757d; font-size: 0.8em;">Decimal degrees (West is negative)</small>
+                    </div>
+                </div>
+                
+                <div style="margin-bottom: 15px;">
+                    <div style="background: #e8f5e8; padding: 8px; border-radius: 4px; border: 1px solid #c8e6c9;">
+                        <span style="color: #2e7d32; font-size: 0.85em;">
+                            💡 <strong>Tip:</strong> Enter an address and click "Find Location" to automatically set lat/lon coordinates. 
+                            You can also manually drag the pin on the map or enter coordinates directly.
+                        </span>
+                    </div>
                 </div>
                 <div style="text-align: right;">
                     <button id="cancel-edit" style="padding: 8px 16px; margin-right: 10px; background: #6c757d; color: white; border: none; border-radius: 4px; cursor: pointer;">Cancel</button>
@@ -2171,6 +2330,9 @@ document.addEventListener('DOMContentLoaded', () => {
             modal = createEditModal();
         }
         
+        // Ensure building has coordinates (set defaults if missing)
+        setDefaultLocation(building);
+        
         // Populate form
         document.getElementById('edit-code').value = building.code;
         document.getElementById('edit-name').value = building.name;
@@ -2178,6 +2340,8 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('edit-aed-count').value = building.aedCount || 0;
         document.getElementById('edit-aed-buffer').value = building.aedLocationBuffer || AED_LOCATION_BUFFER;
         document.getElementById('edit-address').value = getBuildingAddress(building.code, building.name);
+        document.getElementById('edit-lat').value = building.lat || '';
+        document.getElementById('edit-lon').value = building.lon || '';
         
         // Setup event listeners for real-time preview
         ['edit-aed-count', 'edit-aed-buffer', 'edit-gsf'].forEach(id => {
@@ -2186,6 +2350,65 @@ document.addEventListener('DOMContentLoaded', () => {
                 element.oninput = updateTimePreview;
             }
         });
+        
+        // Setup real-time coordinate updates
+        ['edit-lat', 'edit-lon'].forEach(id => {
+            const element = document.getElementById(id);
+            if (element) {
+                element.oninput = () => {
+                    const lat = parseFloat(document.getElementById('edit-lat').value);
+                    const lon = parseFloat(document.getElementById('edit-lon').value);
+                    
+                    if (!isNaN(lat) && !isNaN(lon) && lat >= -90 && lat <= 90 && lon >= -180 && lon <= 180) {
+                        // Update marker position in real-time if coordinates are valid
+                        const marker = buildingMarkers[building.code];
+                        if (marker) {
+                            marker.setLatLng([lat, lon]);
+                        }
+                    }
+                };
+            }
+        });
+        
+        // Setup geocoding button
+        document.getElementById('geocode-address').onclick = async () => {
+            const address = document.getElementById('edit-address').value.trim();
+            if (!address) {
+                alert('Please enter an address first.');
+                return;
+            }
+            
+            // Show loading state
+            const button = document.getElementById('geocode-address');
+            const originalText = button.textContent;
+            button.textContent = '🔄 Finding...';
+            button.disabled = true;
+            
+            try {
+                const result = await geocodeAddress(address);
+                if (result) {
+                    // Update lat/lon fields
+                    document.getElementById('edit-lat').value = result.lat.toFixed(6);
+                    document.getElementById('edit-lon').value = result.lon.toFixed(6);
+                    
+                    // Optionally update address with the full formatted address
+                    if (result.display_name && result.display_name !== address) {
+                        const useFormattedAddress = confirm(`Found location! Would you like to use the formatted address?\n\nYour input: ${address}\nFormatted: ${result.display_name}`);
+                        if (useFormattedAddress) {
+                            document.getElementById('edit-address').value = result.display_name;
+                        }
+                    }
+                    
+                    alert(`✅ Location found!\nLatitude: ${result.lat.toFixed(6)}\nLongitude: ${result.lon.toFixed(6)}`);
+                }
+            } catch (error) {
+                console.error('Geocoding failed:', error);
+            } finally {
+                // Restore button
+                button.textContent = originalText;
+                button.disabled = false;
+            }
+        };
         
         // Initial preview update
         updateTimePreview();
@@ -2200,21 +2423,53 @@ document.addEventListener('DOMContentLoaded', () => {
             const newAedCount = parseInt(document.getElementById('edit-aed-count').value) || 0;
             const newAedBuffer = parseFloat(document.getElementById('edit-aed-buffer').value) || AED_LOCATION_BUFFER;
             const newAddress = document.getElementById('edit-address').value.trim();
+            const newLat = parseFloat(document.getElementById('edit-lat').value);
+            const newLon = parseFloat(document.getElementById('edit-lon').value);
             
             if (newCode && newName) {
+                // Validate coordinates
+                if (isNaN(newLat) || isNaN(newLon)) {
+                    alert('Please enter valid latitude and longitude coordinates.');
+                    return;
+                }
+                
+                if (newLat < -90 || newLat > 90) {
+                    alert('Latitude must be between -90 and 90 degrees.');
+                    return;
+                }
+                
+                if (newLon < -180 || newLon > 180) {
+                    alert('Longitude must be between -180 and 180 degrees.');
+                    return;
+                }
+                
                 // Update building data
                 building.code = newCode;
                 building.name = newName;
                 building.gsf = newGsf;
                 building.aedCount = newAedCount;
                 building.aedLocationBuffer = newAedBuffer;
+                building.lat = newLat;
+                building.lon = newLon;
                 
                 // Update address mapping
                 buildingAddresses[newCode] = newAddress;
                 
-                // Recalculate times only
+                // Update the building in current clusters too
+                currentClusters.forEach(cluster => {
+                    cluster.path.forEach(b => {
+                        if (b.code === newCode) {
+                            b.lat = newLat;
+                            b.lon = newLon;
+                        }
+                    });
+                });
+                
+                // Recalculate times and refresh display
                 recalculateTimesOnly();
                 modal.style.display = 'none';
+                
+                console.log(`Building ${newCode} updated with coordinates: ${newLat}, ${newLon}`);
             } else {
                 alert('Building code and name are required!');
             }
@@ -3338,6 +3593,9 @@ document.addEventListener('DOMContentLoaded', () => {
             let processedBuildingData = JSON.parse(JSON.stringify(buildingData));
 
             processedBuildingData.forEach(b => {
+                // Ensure building has coordinates (set defaults if missing)
+                setDefaultLocation(b);
+                
                 const inventoryTime = b.aedCount * TIME_PER_AED;
                 const gsf = typeof b.gsf === 'number' && !isNaN(b.gsf) ? b.gsf : 0;
                 const inBuildingTravelTime = gsf > 0 ? (gsf / 50000) * TIME_PER_50K_GSF : 0;
