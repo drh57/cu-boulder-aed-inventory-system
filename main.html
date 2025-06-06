@@ -556,17 +556,17 @@ document.addEventListener('DOMContentLoaded', () => {
     const recalcButton = document.getElementById('recalculate-btn');
 
     // --- CONFIGURATION ---
-    const TIME_PER_AED = 5; // 5 minutes per AED as requested
-    const TIME_PER_50K_GSF = 1;
-    const AED_LOCATION_BUFFER = 8; // 8 minutes per building/wing to locate AEDs (first-time search)
-    const WALKING_SPEED_MPH = 3.1;
-    const DRIVING_SPEED_MPH = 25; // Campus/city driving speed
-    const PARKING_TIME = 3; // Additional time for parking and walking from car
-    const WALKING_THRESHOLD = 20; // Switch to driving if walking > 20 minutes
-    const METERS_PER_MINUTE_WALKING = (WALKING_SPEED_MPH * 1609.34) / 60;
-    const METERS_PER_MINUTE_DRIVING = (DRIVING_SPEED_MPH * 1609.34) / 60;
-    const MAX_CLUSTER_TIME = 240;
-    const AVAILABLE_WORKERS = 10; // Number of student workers available
+    let TIME_PER_AED = 5; // 5 minutes per AED as requested
+    let TIME_PER_50K_GSF = 1;
+    let AED_LOCATION_BUFFER = 8; // 8 minutes per building/wing to locate AEDs (first-time search)
+    let WALKING_SPEED_MPH = 3.1;
+    let DRIVING_SPEED_MPH = 25; // Campus/city driving speed
+    let PARKING_TIME = 3; // Additional time for parking and walking from car
+    let WALKING_THRESHOLD = 20; // Switch to driving if walking > 20 minutes
+    let METERS_PER_MINUTE_WALKING = (WALKING_SPEED_MPH * 1609.34) / 60;
+    let METERS_PER_MINUTE_DRIVING = (DRIVING_SPEED_MPH * 1609.34) / 60;
+    let MAX_CLUSTER_TIME = 240;
+    let AVAILABLE_WORKERS = 10; // Number of student workers available
     const BASE_COLORS = [
         '#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd', '#8c564b',
         '#e377c2', '#7f7f7f', '#bcbd22', '#17becf', '#aec7e8', '#ffbb78',
