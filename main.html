@@ -1963,7 +1963,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 // Travel to building (skip for first building)
                 if (buildingIndex > 0) {
                     const prevBuilding = cluster.path[buildingIndex - 1];
-                    const travelInfo = calculateTravelTimeSync(prevBuilding.lat, prevBuilding.lon, building.lat, building.lon);
+                    const travelInfo = window.calculateTravelTimeSync ? window.calculateTravelTimeSync(prevBuilding.lat, prevBuilding.lon, building.lat, building.lon) : { time: 0, method: 'walk' };
                     const travelTime = Math.round(travelInfo.time);
                     cumulativeTime += travelTime;
                     
@@ -2878,7 +2878,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!fromBuilding || !toBuilding) return;
         
         const distance = calculateDistance(fromBuilding.lat, fromBuilding.lon, toBuilding.lat, toBuilding.lon);
-        const currentTravelInfo = calculateTravelTimeSync(fromBuilding.lat, fromBuilding.lon, toBuilding.lat, toBuilding.lon);
+        const currentTravelInfo = window.calculateTravelTimeSync ? window.calculateTravelTimeSync(fromBuilding.lat, fromBuilding.lon, toBuilding.lat, toBuilding.lon) : { time: 0, method: 'walk' };
         
         // Check if there's existing custom travel time with straight-line preference
         const travelKey = `${fromCode}-${toCode}`;
@@ -3601,7 +3601,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 // Add travel time to this building (except for first building)
                 if (index > 0) {
                     const prevBuilding = cluster.path[index - 1];
-                    const travelInfo = calculateTravelTimeSync(prevBuilding.lat, prevBuilding.lon, building.lat, building.lon, prevBuilding.code, building.code);
+                    const travelInfo = window.calculateTravelTimeSync ? window.calculateTravelTimeSync(prevBuilding.lat, prevBuilding.lon, building.lat, building.lon, prevBuilding.code, building.code) : { time: 0, method: 'walk' };
                     totalTime += travelInfo.time;
                 }
             });
@@ -3866,7 +3866,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 // Add travel segment (except for first building)
                 if (buildingIndex > 0) {
                     const prevBuilding = cluster.path[buildingIndex - 1];
-                    const travelInfo = calculateTravelTimeSync(prevBuilding.lat, prevBuilding.lon, b.lat, b.lon, prevBuilding.code, b.code);
+                    const travelInfo = window.calculateTravelTimeSync ? window.calculateTravelTimeSync(prevBuilding.lat, prevBuilding.lon, b.lat, b.lon, prevBuilding.code, b.code) : { time: 0, method: 'walk' };
                     
                     // Check if this route uses straight-line distance
                     const travelKey = `${prevBuilding.code}-${b.code}`;
@@ -4334,6 +4334,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Make displayClusters globally accessible
     window.displayClusters = displayClusters;
+    
+    // Make calculateTravelTimeSync globally accessible for time-based clustering
+    window.calculateTravelTimeSync = calculateTravelTimeSync;
 
     // Get visible clusters for PDF generation
     function getVisibleClusters() {
@@ -4451,7 +4454,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         console.log(`Using actual time ${actualRouteTimes[routeKey].toFixed(1)} min for ${routeKey}`);
                     } else {
                         // Fall back to calculated time
-                        const travelInfo = calculateTravelTimeSync(prevBuilding.lat, prevBuilding.lon, building.lat, building.lon, prevBuilding.code, building.code);
+                        const travelInfo = window.calculateTravelTimeSync ? window.calculateTravelTimeSync(prevBuilding.lat, prevBuilding.lon, building.lat, building.lon, prevBuilding.code, building.code) : { time: 0, method: 'walk' };
                         totalTime += travelInfo.time;
                     }
                 }
@@ -4683,7 +4686,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
 
                     if (nearest) {
-                        const travelInfo = calculateTravelTimeSync(lastBuilding.lat, lastBuilding.lon, nearest.lat, nearest.lon, lastBuilding.code, nearest.code);
+                        const travelInfo = window.calculateTravelTimeSync ? window.calculateTravelTimeSync(lastBuilding.lat, lastBuilding.lon, nearest.lat, nearest.lon, lastBuilding.code, nearest.code) : { time: 0, method: 'walk' };
                         if (currentCluster.totalTime + travelInfo.time + nearest.totalTime <= MAX_CLUSTER_TIME) {
                             currentCluster.totalTime += travelInfo.time + nearest.totalTime;
                             currentCluster.path.push(nearest);
@@ -6029,7 +6032,7 @@ function findOptimalTimeCluster(buildings, maxTime) {
             // Add travel time if not first building
             if (selectedBuildings.length > 0) {
                 const lastBuilding = selectedBuildings[selectedBuildings.length - 1];
-                const travelTime = calculateTravelTimeSync(lastBuilding.lat, lastBuilding.lon, building.lat, building.lon, lastBuilding.code, building.code).time;
+                const travelTime = window.calculateTravelTimeSync(lastBuilding.lat, lastBuilding.lon, building.lat, building.lon, lastBuilding.code, building.code).time;
                 addedTime += travelTime;
             }
             
