@@ -3654,15 +3654,20 @@ document.addEventListener('DOMContentLoaded', () => {
             headerDiv.style.justifyContent = 'space-between';
             headerDiv.style.alignItems = 'center';
             
+            // Determine if all buildings in this cluster are checked
+            const allChecked = cluster.path.every(building => building.checked);
+            const checkButtonText = allChecked ? '⏪ Uncheck All' : '✅ Check All';
+            const checkButtonTitle = allChecked ? 'Mark entire work block as unchecked' : 'Mark entire work block as checked';
+            
             headerDiv.innerHTML = `
                 <span>Work Block ${index + 1}</span>
                 <div style="display: flex; gap: 5px; align-items: center;">
                     <button 
                         onclick="markClusterAsChecked(${index})"
                         style="background: rgba(40,167,69,0.8); border: 1px solid rgba(255,255,255,0.5); border-radius: 4px; color: white; padding: 4px 8px; font-size: 0.8em; cursor: pointer; transition: all 0.2s;"
-                        title="Mark entire work block as checked"
+                        title="${checkButtonTitle}"
                     >
-                        ✅ Check All
+                        ${checkButtonText}
                     </button>
                     <button 
                         onclick="toggleClusterVisibility(${index})"
@@ -5398,18 +5403,44 @@ window.markClusterAsChecked = function(clusterIndex) {
     
     console.log(`Processing Work Block ${clusterIndex + 1} with ${cluster.path.length} buildings`);
     
-    cluster.path.forEach(building => {
-        if (!building.checked) {
-            building.checked = true;
-            changedCount++;
-            
-            // Update in main building data too
-            const mainBuilding = buildingData.find(b => b.code === building.code);
-            if (mainBuilding) {
-                mainBuilding.checked = true;
+    // Check if all buildings in cluster are already checked
+    const allChecked = cluster.path.every(building => building.checked);
+    
+    if (allChecked) {
+        // If all are checked, uncheck them all
+        cluster.path.forEach(building => {
+            if (building.checked) {
+                building.checked = false;
+                changedCount++;
+                
+                // Update in main building data too
+                const mainBuilding = buildingData.find(b => b.code === building.code);
+                if (mainBuilding) {
+                    mainBuilding.checked = false;
+                }
             }
-        }
-    });
+        });
+        
+        console.log(`Unchecked ${changedCount} buildings in Work Block ${clusterIndex + 1}`);
+        alert(`✅ Unchecked ${changedCount} buildings in Work Block ${clusterIndex + 1}!`);
+    } else {
+        // If not all are checked, check them all
+        cluster.path.forEach(building => {
+            if (!building.checked) {
+                building.checked = true;
+                changedCount++;
+                
+                // Update in main building data too
+                const mainBuilding = buildingData.find(b => b.code === building.code);
+                if (mainBuilding) {
+                    mainBuilding.checked = true;
+                }
+            }
+        });
+        
+        console.log(`Checked ${changedCount} buildings in Work Block ${clusterIndex + 1}`);
+        alert(`✅ Checked ${changedCount} buildings in Work Block ${clusterIndex + 1}!`);
+    }
     
     saveBuildingStatus();
     if (window.displayClusters) {
@@ -5420,9 +5451,6 @@ window.markClusterAsChecked = function(clusterIndex) {
     setTimeout(() => {
         refreshSpreadsheet();
     }, 100);
-    
-    console.log(`Marked ${changedCount} buildings as checked in Work Block ${clusterIndex + 1}`);
-    alert(`✅ Marked ${changedCount} buildings in Work Block ${clusterIndex + 1} as checked!`);
 };
 
 // --- BUILDING SPREADSHEET FUNCTIONALITY ---
