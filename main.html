@@ -275,6 +275,246 @@
             margin-top: 5px;
         }
         
+        /* Building Spreadsheet Modal */
+        .building-list-modal {
+            display: none;
+            position: fixed;
+            z-index: 2000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+        }
+        
+        .building-list-modal-content {
+            background-color: #fefefe;
+            margin: 2% auto;
+            padding: 20px;
+            border: none;
+            border-radius: 8px;
+            width: 95%;
+            max-width: 1200px;
+            height: 90%;
+            overflow: hidden;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .spreadsheet-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            border-bottom: 1px solid #dee2e6;
+            padding-bottom: 15px;
+        }
+        
+        .spreadsheet-controls {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+        
+        .building-table-container {
+            flex: 1;
+            overflow: auto;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+        }
+        
+        .building-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 14px;
+        }
+        
+        .building-table th,
+        .building-table td {
+            padding: 8px 12px;
+            text-align: left;
+            border-bottom: 1px solid #dee2e6;
+            border-right: 1px solid #dee2e6;
+        }
+        
+        .building-table th {
+            background-color: #f8f9fa;
+            font-weight: bold;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            cursor: pointer;
+            user-select: none;
+        }
+        
+        .building-table th:hover {
+            background-color: #e9ecef;
+        }
+        
+        .building-table tr:nth-child(even) {
+            background-color: #f8f9fa;
+        }
+        
+        .building-table tr.checked {
+            background-color: #d4edda !important;
+            color: #155724;
+        }
+        
+        .building-table tr:hover:not(.checked) {
+            background-color: #e3f2fd;
+        }
+        
+        .status-checkbox {
+            transform: scale(1.2);
+            cursor: pointer;
+        }
+        
+        .cluster-badge {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: bold;
+            color: white;
+            min-width: 20px;
+            text-align: center;
+        }
+        
+        .sort-indicator {
+            margin-left: 5px;
+            opacity: 0.5;
+        }
+        
+        /* Time-based cluster modal */
+        .time-cluster-modal {
+            display: none;
+            position: fixed;
+            z-index: 2000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+        }
+        
+        .time-cluster-modal-content {
+            background-color: #fefefe;
+            margin: 5% auto;
+            padding: 20px;
+            border: none;
+            border-radius: 8px;
+            width: 90%;
+            max-width: 600px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        }
+        
+        .time-input-section {
+            margin-bottom: 20px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 6px;
+            border: 1px solid #dee2e6;
+        }
+        
+        .time-input-row {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 10px;
+        }
+        
+        .time-input {
+            padding: 8px 12px;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            font-size: 16px;
+            width: 100px;
+        }
+        
+        .preview-section {
+            margin: 20px 0;
+            padding: 15px;
+            background: #e3f2fd;
+            border-radius: 6px;
+            border: 1px solid #2196f3;
+        }
+        
+        .preview-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 10px;
+            margin-top: 10px;
+        }
+        
+        .preview-stat {
+            text-align: center;
+            padding: 8px;
+            background: white;
+            border-radius: 4px;
+            border: 1px solid #ccc;
+        }
+        
+        .preview-stat-value {
+            font-size: 18px;
+            font-weight: bold;
+            color: #2c3e50;
+        }
+        
+        .preview-stat-label {
+            font-size: 12px;
+            color: #6c757d;
+            margin-top: 2px;
+        }
+        
+        .option-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+        
+        .option-btn {
+            flex: 1;
+            padding: 12px;
+            border: none;
+            border-radius: 6px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .option-btn.pluck {
+            background-color: #ffc107;
+            color: #212529;
+        }
+        
+        .option-btn.pluck:hover {
+            background-color: #e0a800;
+        }
+        
+        .option-btn.recalculate {
+            background-color: #dc3545;
+            color: white;
+        }
+        
+        .option-btn.recalculate:hover {
+            background-color: #c82333;
+        }
+        
+        /* Checked building styles */
+        .checked-building {
+            background-color: #d4edda !important;
+            border-left: 4px solid #28a745 !important;
+        }
+        
+        .checked-building .building-name {
+            color: #155724 !important;
+        }
+        
+        .checked-building .building-time {
+            color: #155724 !important;
+        }
+        
         .summary-header { flex-shrink: 0; }
         .summary-content-wrapper { flex-grow: 1; overflow-y: auto; }
         #summary h1 { font-size: 1.6em; margin-top: 0; margin-bottom: 5px; color: #2c3e50; }
@@ -417,6 +657,10 @@
                     
                     <button id="add-building-btn" style="display: block; width: 100%; padding: 8px; font-size: 0.9em; font-weight: bold; background-color: #28a745; color: white; border: none; border-radius: 5px; cursor: pointer; margin-bottom: 10px; transition: background-color 0.2s;">➕ Add New Building</button>
                     
+                    <button id="building-list-btn" style="display: block; width: 100%; padding: 8px; font-size: 0.9em; font-weight: bold; background-color: #17a2b8; color: white; border: none; border-radius: 5px; cursor: pointer; margin-bottom: 10px; transition: background-color 0.2s;">📋 Building Spreadsheet</button>
+                    
+                    <button id="time-cluster-btn" style="display: block; width: 100%; padding: 8px; font-size: 0.9em; font-weight: bold; background-color: #fd7e14; color: white; border: none; border-radius: 5px; cursor: pointer; margin-bottom: 10px; transition: background-color 0.2s;">⏱️ Generate Time-Based Cluster</button>
+                    
                     <div style="margin-bottom: 10px; padding: 8px; background: #e8f5e8; border: 1px solid #c8e6c9; border-radius: 5px;">
                         <label style="display: flex; align-items: center; font-size: 0.9em; color: #2e7d32; cursor: pointer;">
                             <input type="checkbox" id="campus-mode" style="margin-right: 8px;">
@@ -488,6 +732,101 @@
                     <button type="submit" class="btn-primary">Add Building</button>
                 </div>
             </form>
+        </div>
+    </div>
+
+    <!-- Building Spreadsheet Modal -->
+    <div id="building-list-modal" class="building-list-modal">
+        <div class="building-list-modal-content">
+            <div class="spreadsheet-header">
+                <h2 style="margin: 0; color: #2c3e50;">📋 Building Inventory Spreadsheet</h2>
+                <div class="spreadsheet-controls">
+                    <span id="building-stats" style="margin-right: 15px; color: #6c757d;"></span>
+                    <button class="btn-secondary" id="export-csv-btn">📤 Export CSV</button>
+                    <button class="btn-secondary" id="close-spreadsheet-btn">✕ Close</button>
+                </div>
+            </div>
+            <div class="building-table-container">
+                <table class="building-table" id="building-table">
+                    <thead>
+                        <tr>
+                            <th data-sort="checked">Status <span class="sort-indicator">↕</span></th>
+                            <th data-sort="code">Code <span class="sort-indicator">↕</span></th>
+                            <th data-sort="name">Name <span class="sort-indicator">↕</span></th>
+                            <th data-sort="gsf">GSF <span class="sort-indicator">↕</span></th>
+                            <th data-sort="aedCount">AEDs <span class="sort-indicator">↕</span></th>
+                            <th data-sort="cluster">Cluster <span class="sort-indicator">↕</span></th>
+                            <th data-sort="lat">Latitude <span class="sort-indicator">↕</span></th>
+                            <th data-sort="lon">Longitude <span class="sort-indicator">↕</span></th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="building-table-body">
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Time-Based Cluster Modal -->
+    <div id="time-cluster-modal" class="time-cluster-modal">
+        <div class="time-cluster-modal-content">
+            <h2 style="margin-top: 0; color: #2c3e50;">⏱️ Generate Time-Based Cluster</h2>
+            <p style="color: #6c757d; margin-bottom: 20px;">Create an optimized work block for someone with limited time, using only unchecked buildings.</p>
+            
+            <div class="time-input-section">
+                <h3 style="margin-top: 0;">Available Time</h3>
+                <div class="time-input-row">
+                    <label for="available-minutes">Minutes:</label>
+                    <input type="number" id="available-minutes" class="time-input" placeholder="90" min="5" max="480">
+                    <span style="color: #6c757d;">or</span>
+                    <label for="available-hours">Hours:</label>
+                    <input type="number" id="available-hours" class="time-input" placeholder="1.5" min="0.1" max="8" step="0.1">
+                </div>
+                <button class="btn-primary" id="calculate-cluster-btn" style="margin-top: 10px;">🔍 Find Optimal Buildings</button>
+            </div>
+            
+            <div id="cluster-preview" class="preview-section" style="display: none;">
+                <h3 style="margin-top: 0;">📊 Cluster Preview</h3>
+                <div class="preview-stats">
+                    <div class="preview-stat">
+                        <div class="preview-stat-value" id="preview-buildings">0</div>
+                        <div class="preview-stat-label">Buildings</div>
+                    </div>
+                    <div class="preview-stat">
+                        <div class="preview-stat-value" id="preview-aeds">0</div>
+                        <div class="preview-stat-label">Total AEDs</div>
+                    </div>
+                    <div class="preview-stat">
+                        <div class="preview-stat-value" id="preview-time">0</div>
+                        <div class="preview-stat-label">Total Time (min)</div>
+                    </div>
+                    <div class="preview-stat">
+                        <div class="preview-stat-value" id="preview-efficiency">0%</div>
+                        <div class="preview-stat-label">Time Efficiency</div>
+                    </div>
+                </div>
+                
+                <div style="margin-top: 15px;">
+                    <h4>Buildings in this cluster:</h4>
+                    <div id="preview-building-list" style="max-height: 120px; overflow-y: auto; background: white; padding: 10px; border-radius: 4px; border: 1px solid #ccc;"></div>
+                </div>
+                
+                <div class="option-buttons">
+                    <button class="option-btn pluck" id="pluck-buildings-btn">
+                        📤 Pluck Buildings<br>
+                        <small>Remove from existing clusters, keep others unchanged</small>
+                    </button>
+                    <button class="option-btn recalculate" id="full-recalc-btn">
+                        🔄 Full Recalculation<br>
+                        <small>Create cluster and recalculate all remaining buildings</small>
+                    </button>
+                </div>
+            </div>
+            
+            <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px;">
+                <button class="btn-secondary" id="cancel-time-cluster-btn">Cancel</button>
+            </div>
         </div>
     </div>
 
@@ -3256,6 +3595,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 <span>Work Block ${index + 1}</span>
                 <div style="display: flex; gap: 5px; align-items: center;">
                     <button 
+                        onclick="markClusterAsChecked(${index})"
+                        style="background: rgba(40,167,69,0.8); border: 1px solid rgba(255,255,255,0.5); border-radius: 4px; color: white; padding: 4px 8px; font-size: 0.8em; cursor: pointer; transition: all 0.2s;"
+                        title="Mark entire work block as checked"
+                    >
+                        ✅ Check All
+                    </button>
+                    <button 
                         onclick="toggleClusterVisibility(${index})"
                         style="background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.5); border-radius: 4px; color: white; padding: 4px 8px; font-size: 0.8em; cursor: pointer; transition: all 0.2s;"
                         title="${clusterVisibility[index] ? 'Hide this cluster' : 'Show this cluster'}"
@@ -3279,15 +3625,26 @@ document.addEventListener('DOMContentLoaded', () => {
                 const hasCustomBuffer = b.aedLocationBuffer && b.aedLocationBuffer !== AED_LOCATION_BUFFER;
                 const customIndicator = hasCustomBuffer ? '<span style="color: #e67e22; font-weight: bold;">*</span>' : '';
                 
+                // Add checked status class to li element
+                if (b.checked) {
+                    li.classList.add('checked-building');
+                }
+                
                 li.innerHTML = `
-                    <span class="drag-handle">⋮⋮</span>
-                    <span class="step-number">${stepNumber}</span>
-                    <span class="building-name">${b.code} - ${b.name}${customIndicator}${b.locationQuestionable ? '<span style="color: #e74c3c; font-weight: bold; margin-left: 5px;" title="Location marked as questionable">❓</span>' : ''}</span>
-                    <div class="building-controls">
-                        <span class="building-time">${Math.round(b.totalTime)} min</span>
-                        <button class="edit-btn" onclick="window.editBuilding('${b.code}')">Edit</button>
-                        <button class="question-btn" onclick="window.toggleQuestionable('${b.code}')" style="padding: 2px 6px; font-size: 0.7em; border: none; border-radius: 3px; cursor: pointer; transition: background-color 0.2s; background-color: ${b.locationQuestionable ? '#e74c3c' : '#f39c12'}; color: white;" title="${b.locationQuestionable ? 'Mark as confirmed location' : 'Mark location as questionable'}">?</button>
-                        <button class="delete-btn" onclick="window.deleteBuilding('${b.code}', ${index})">Delete</button>
+                    <div style="display: flex; align-items: center; width: 100%;">
+                        <input type="checkbox" class="status-checkbox" ${b.checked ? 'checked' : ''} 
+                               onchange="toggleBuildingStatus('${b.code}'); event.stopPropagation();" 
+                               title="${b.checked ? 'Mark as unchecked' : 'Mark as checked'}"
+                               style="margin-right: 8px; transform: scale(1.2);">
+                        <span class="drag-handle">⋮⋮</span>
+                        <span class="step-number">${stepNumber}</span>
+                        <span class="building-name" style="${b.checked ? 'text-decoration: line-through; opacity: 0.7;' : ''}">${b.code} - ${b.name}${customIndicator}${b.locationQuestionable ? '<span style="color: #e74c3c; font-weight: bold; margin-left: 5px;" title="Location marked as questionable">❓</span>' : ''}</span>
+                        <div class="building-controls">
+                            <span class="building-time">${Math.round(b.totalTime)} min</span>
+                            <button class="edit-btn" onclick="window.editBuilding('${b.code}')">Edit</button>
+                            <button class="question-btn" onclick="window.toggleQuestionable('${b.code}')" style="padding: 2px 6px; font-size: 0.7em; border: none; border-radius: 3px; cursor: pointer; transition: background-color 0.2s; background-color: ${b.locationQuestionable ? '#e74c3c' : '#f39c12'}; color: white;" title="${b.locationQuestionable ? 'Mark as confirmed location' : 'Mark location as questionable'}">?</button>
+                            <button class="delete-btn" onclick="window.deleteBuilding('${b.code}', ${index})">Delete</button>
+                        </div>
                     </div>`;
                 li.addEventListener('click', (e) => {
                     if (!e.target.classList.contains('edit-btn') && !e.target.classList.contains('delete-btn')) {
@@ -4651,6 +5008,27 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('building-aed-count').value = '1';
     });
     
+    // Building spreadsheet functionality
+    const buildingListBtn = document.getElementById('building-list-btn');
+    buildingListBtn.addEventListener('mouseover', () => buildingListBtn.style.backgroundColor = '#138496');
+    buildingListBtn.addEventListener('mouseout', () => buildingListBtn.style.backgroundColor = '#17a2b8');
+    buildingListBtn.addEventListener('click', () => {
+        document.getElementById('building-list-modal').style.display = 'block';
+        populateBuildingSpreadsheet();
+    });
+    
+    // Time-based cluster functionality
+    const timeClusterBtn = document.getElementById('time-cluster-btn');
+    timeClusterBtn.addEventListener('mouseover', () => timeClusterBtn.style.backgroundColor = '#e55a00');
+    timeClusterBtn.addEventListener('mouseout', () => timeClusterBtn.style.backgroundColor = '#fd7e14');
+    timeClusterBtn.addEventListener('click', () => {
+        document.getElementById('time-cluster-modal').style.display = 'block';
+        // Reset the form
+        document.getElementById('available-minutes').value = '';
+        document.getElementById('available-hours').value = '';
+        document.getElementById('cluster-preview').style.display = 'none';
+    });
+    
     // Campus mode toggle handler
     document.getElementById('campus-mode').addEventListener('change', function() {
         const campusMode = this.checked;
@@ -4788,7 +5166,572 @@ document.addEventListener('DOMContentLoaded', () => {
     initializeResizablePanes();
     initializeFocusMode();
     initializeAddBuildingModal();
+    initializeBuildingSpreadsheet();
+    initializeTimeClusterModal();
+    initializeBuildingStatus();
 });
+
+// --- BUILDING STATUS MANAGEMENT ---
+function initializeBuildingStatus() {
+    // Initialize checked status for all buildings if not already set
+    buildingData.forEach(building => {
+        if (building.checked === undefined) {
+            building.checked = false;
+        }
+    });
+    
+    // Load saved status from localStorage
+    const savedStatus = localStorage.getItem('buildingCheckedStatus');
+    if (savedStatus) {
+        try {
+            const statusMap = JSON.parse(savedStatus);
+            buildingData.forEach(building => {
+                if (statusMap[building.code] !== undefined) {
+                    building.checked = statusMap[building.code];
+                }
+            });
+        } catch (error) {
+            console.error('Error loading building status:', error);
+        }
+    }
+}
+
+function saveBuildingStatus() {
+    const statusMap = {};
+    buildingData.forEach(building => {
+        statusMap[building.code] = building.checked || false;
+    });
+    localStorage.setItem('buildingCheckedStatus', JSON.stringify(statusMap));
+}
+
+function toggleBuildingStatus(buildingCode, updateClusters = true) {
+    const building = buildingData.find(b => b.code === buildingCode);
+    if (building) {
+        building.checked = !building.checked;
+        
+        // Update building in current clusters
+        currentClusters.forEach(cluster => {
+            cluster.path.forEach(b => {
+                if (b.code === buildingCode) {
+                    b.checked = building.checked;
+                }
+            });
+        });
+        
+        saveBuildingStatus();
+        
+        if (updateClusters) {
+            // Update display to show checked status
+            displayClusters();
+        }
+        
+        console.log(`Building ${buildingCode} marked as ${building.checked ? 'checked' : 'unchecked'}`);
+        return building.checked;
+    }
+    return false;
+}
+
+function markClusterAsChecked(clusterIndex) {
+    if (currentClusters[clusterIndex]) {
+        const cluster = currentClusters[clusterIndex];
+        let changedCount = 0;
+        
+        cluster.path.forEach(building => {
+            if (!building.checked) {
+                building.checked = true;
+                changedCount++;
+                
+                // Update in main building data too
+                const mainBuilding = buildingData.find(b => b.code === building.code);
+                if (mainBuilding) {
+                    mainBuilding.checked = true;
+                }
+            }
+        });
+        
+        saveBuildingStatus();
+        displayClusters();
+        
+        alert(`✅ Marked ${changedCount} buildings in Work Block ${clusterIndex + 1} as checked!`);
+    }
+}
+
+// --- BUILDING SPREADSHEET FUNCTIONALITY ---
+function initializeBuildingSpreadsheet() {
+    // Modal event listeners
+    document.getElementById('close-spreadsheet-btn').addEventListener('click', () => {
+        document.getElementById('building-list-modal').style.display = 'none';
+    });
+    
+    document.getElementById('export-csv-btn').addEventListener('click', exportBuildingData);
+    
+    // Close modal when clicking outside
+    document.getElementById('building-list-modal').addEventListener('click', (e) => {
+        if (e.target.id === 'building-list-modal') {
+            document.getElementById('building-list-modal').style.display = 'none';
+        }
+    });
+}
+
+function populateBuildingSpreadsheet() {
+    const tableBody = document.getElementById('building-table-body');
+    const buildingStats = document.getElementById('building-stats');
+    
+    // Calculate stats
+    const totalBuildings = buildingData.length;
+    const checkedBuildings = buildingData.filter(b => b.checked).length;
+    const uncheckedBuildings = totalBuildings - checkedBuildings;
+    
+    buildingStats.textContent = `${totalBuildings} buildings • ${checkedBuildings} checked • ${uncheckedBuildings} remaining`;
+    
+    // Clear existing content
+    tableBody.innerHTML = '';
+    
+    // Add rows for each building
+    buildingData.forEach(building => {
+        const row = document.createElement('tr');
+        
+        // Add checked class for styling
+        if (building.checked) {
+            row.classList.add('checked');
+        }
+        
+        // Find which cluster this building belongs to
+        let clusterAssignment = 'Unassigned';
+        currentClusters.forEach((cluster, index) => {
+            if (cluster.path.some(b => b.code === building.code)) {
+                clusterAssignment = `Work Block ${index + 1}`;
+            }
+        });
+        
+        row.innerHTML = `
+            <td>
+                <input type="checkbox" class="status-checkbox" ${building.checked ? 'checked' : ''} 
+                       onchange="toggleBuildingStatus('${building.code}', false); refreshSpreadsheet();">
+            </td>
+            <td>${building.code}</td>
+            <td>${building.name}</td>
+            <td>${building.gsf || 0}</td>
+            <td>${building.aedCount}</td>
+            <td>
+                <span class="cluster-badge" style="background-color: ${getClusterColor(clusterAssignment)};">
+                    ${clusterAssignment}
+                </span>
+            </td>
+            <td>${building.lat.toFixed(6)}</td>
+            <td>${building.lon.toFixed(6)}</td>
+            <td>
+                <button onclick="window.editBuilding('${building.code}')" 
+                        style="padding: 4px 8px; font-size: 0.8em; background: #007bff; color: white; border: none; border-radius: 3px; cursor: pointer; margin-right: 5px;">
+                    Edit
+                </button>
+                <button onclick="map.setView([${building.lat}, ${building.lon}], 18); document.getElementById('building-list-modal').style.display = 'none';" 
+                        style="padding: 4px 8px; font-size: 0.8em; background: #28a745; color: white; border: none; border-radius: 3px; cursor: pointer;">
+                    View
+                </button>
+            </td>
+        `;
+        
+        tableBody.appendChild(row);
+    });
+    
+    // Setup table sorting
+    setupTableSorting();
+}
+
+function refreshSpreadsheet() {
+    // Update stats and re-render if spreadsheet is open
+    if (document.getElementById('building-list-modal').style.display === 'block') {
+        populateBuildingSpreadsheet();
+    }
+}
+
+function getClusterColor(clusterAssignment) {
+    const clusterIndex = parseInt(clusterAssignment.replace('Work Block ', '')) - 1;
+    if (clusterIndex >= 0 && clusterIndex < currentClusters.length) {
+        const colors = generateClusterColors(currentClusters.length);
+        return colors[clusterIndex];
+    }
+    return '#6c757d'; // Gray for unassigned
+}
+
+function setupTableSorting() {
+    const headers = document.querySelectorAll('.building-table th[data-sort]');
+    headers.forEach(header => {
+        header.addEventListener('click', () => {
+            const sortKey = header.dataset.sort;
+            sortBuildingTable(sortKey);
+        });
+    });
+}
+
+let currentSortKey = null;
+let currentSortDirection = 'asc';
+
+function sortBuildingTable(sortKey) {
+    const tableBody = document.getElementById('building-table-body');
+    const rows = Array.from(tableBody.querySelectorAll('tr'));
+    
+    // Toggle direction if same key
+    if (currentSortKey === sortKey) {
+        currentSortDirection = currentSortDirection === 'asc' ? 'desc' : 'asc';
+    } else {
+        currentSortDirection = 'asc';
+    }
+    currentSortKey = sortKey;
+    
+    // Sort rows
+    rows.sort((a, b) => {
+        let aValue, bValue;
+        
+        switch (sortKey) {
+            case 'checked':
+                aValue = a.classList.contains('checked') ? 1 : 0;
+                bValue = b.classList.contains('checked') ? 1 : 0;
+                break;
+            case 'code':
+                aValue = a.children[1].textContent;
+                bValue = b.children[1].textContent;
+                break;
+            case 'name':
+                aValue = a.children[2].textContent;
+                bValue = b.children[2].textContent;
+                break;
+            case 'gsf':
+                aValue = parseInt(a.children[3].textContent) || 0;
+                bValue = parseInt(b.children[3].textContent) || 0;
+                break;
+            case 'aedCount':
+                aValue = parseInt(a.children[4].textContent) || 0;
+                bValue = parseInt(b.children[4].textContent) || 0;
+                break;
+            case 'cluster':
+                aValue = a.children[5].textContent;
+                bValue = b.children[5].textContent;
+                break;
+            case 'lat':
+                aValue = parseFloat(a.children[6].textContent) || 0;
+                bValue = parseFloat(b.children[6].textContent) || 0;
+                break;
+            case 'lon':
+                aValue = parseFloat(a.children[7].textContent) || 0;
+                bValue = parseFloat(b.children[7].textContent) || 0;
+                break;
+            default:
+                return 0;
+        }
+        
+        let comparison = 0;
+        if (aValue < bValue) comparison = -1;
+        if (aValue > bValue) comparison = 1;
+        
+        return currentSortDirection === 'asc' ? comparison : -comparison;
+    });
+    
+    // Re-append sorted rows
+    rows.forEach(row => tableBody.appendChild(row));
+    
+    // Update header indicators
+    document.querySelectorAll('.building-table th .sort-indicator').forEach(indicator => {
+        indicator.textContent = '↕';
+        indicator.style.opacity = '0.5';
+    });
+    
+    const currentHeader = document.querySelector(`[data-sort="${sortKey}"] .sort-indicator`);
+    if (currentHeader) {
+        currentHeader.textContent = currentSortDirection === 'asc' ? '↑' : '↓';
+        currentHeader.style.opacity = '1';
+    }
+}
+
+function exportBuildingData() {
+    const headers = ['Status', 'Code', 'Name', 'GSF', 'AED_Count', 'Cluster', 'Latitude', 'Longitude', 'Checked'];
+    
+    const csvData = [headers];
+    
+    buildingData.forEach(building => {
+        // Find cluster assignment
+        let clusterAssignment = 'Unassigned';
+        currentClusters.forEach((cluster, index) => {
+            if (cluster.path.some(b => b.code === building.code)) {
+                clusterAssignment = `Work Block ${index + 1}`;
+            }
+        });
+        
+        csvData.push([
+            building.checked ? 'Checked' : 'Unchecked',
+            building.code,
+            building.name,
+            building.gsf || 0,
+            building.aedCount,
+            clusterAssignment,
+            building.lat,
+            building.lon,
+            building.checked ? 'TRUE' : 'FALSE'
+        ]);
+    });
+    
+    const csvContent = csvData.map(row => 
+        row.map(field => `"${field}"`).join(',')
+    ).join('\n');
+    
+    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `building_inventory_${new Date().toISOString().split('T')[0]}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    window.URL.revokeObjectURL(url);
+}
+
+// --- TIME-BASED CLUSTER FUNCTIONALITY ---
+function initializeTimeClusterModal() {
+    // Event listeners
+    document.getElementById('cancel-time-cluster-btn').addEventListener('click', () => {
+        document.getElementById('time-cluster-modal').style.display = 'none';
+    });
+    
+    // Close modal when clicking outside
+    document.getElementById('time-cluster-modal').addEventListener('click', (e) => {
+        if (e.target.id === 'time-cluster-modal') {
+            document.getElementById('time-cluster-modal').style.display = 'none';
+        }
+    });
+    
+    // Sync time inputs
+    document.getElementById('available-minutes').addEventListener('input', (e) => {
+        const minutes = parseFloat(e.target.value);
+        if (!isNaN(minutes) && minutes > 0) {
+            document.getElementById('available-hours').value = (minutes / 60).toFixed(1);
+        }
+    });
+    
+    document.getElementById('available-hours').addEventListener('input', (e) => {
+        const hours = parseFloat(e.target.value);
+        if (!isNaN(hours) && hours > 0) {
+            document.getElementById('available-minutes').value = Math.round(hours * 60);
+        }
+    });
+    
+    // Calculate cluster
+    document.getElementById('calculate-cluster-btn').addEventListener('click', calculateTimeBasedCluster);
+    
+    // Option buttons
+    document.getElementById('pluck-buildings-btn').addEventListener('click', () => {
+        executeTimeClusterOption('pluck');
+    });
+    
+    document.getElementById('full-recalc-btn').addEventListener('click', () => {
+        executeTimeClusterOption('recalculate');
+    });
+}
+
+let currentTimeClusterData = null;
+
+function calculateTimeBasedCluster() {
+    const minutesInput = document.getElementById('available-minutes').value;
+    const hoursInput = document.getElementById('available-hours').value;
+    
+    // Get available time in minutes
+    let availableMinutes;
+    if (minutesInput) {
+        availableMinutes = parseFloat(minutesInput);
+    } else if (hoursInput) {
+        availableMinutes = parseFloat(hoursInput) * 60;
+    } else {
+        alert('Please enter available time in minutes or hours.');
+        return;
+    }
+    
+    if (isNaN(availableMinutes) || availableMinutes <= 0) {
+        alert('Please enter a valid positive time amount.');
+        return;
+    }
+    
+    // Get all unchecked buildings
+    const uncheckedBuildings = buildingData.filter(b => !b.checked);
+    
+    if (uncheckedBuildings.length === 0) {
+        alert('🎉 All buildings have been checked! No unchecked buildings available for clustering.');
+        return;
+    }
+    
+    console.log(`Finding optimal cluster for ${availableMinutes} minutes with ${uncheckedBuildings.length} unchecked buildings`);
+    
+    // Calculate times for all buildings
+    const buildingsWithTimes = uncheckedBuildings.map(building => {
+        const inventoryTime = building.aedCount * TIME_PER_AED;
+        const gsf = typeof building.gsf === 'number' && !isNaN(building.gsf) ? building.gsf : 0;
+        const inBuildingTravelTime = gsf > 0 ? (gsf / 50000) * TIME_PER_50K_GSF : 0;
+        const aedLocationTime = building.aedLocationBuffer || AED_LOCATION_BUFFER;
+        const totalTime = inventoryTime + inBuildingTravelTime + aedLocationTime;
+        
+        return {
+            ...building,
+            totalTime: totalTime
+        };
+    });
+    
+    // Find optimal cluster using greedy algorithm with time constraints
+    const optimalCluster = findOptimalTimeCluster(buildingsWithTimes, availableMinutes);
+    
+    if (optimalCluster.path.length === 0) {
+        alert('⚠️ No suitable buildings found for the given time limit. Try increasing the available time.');
+        return;
+    }
+    
+    // Store for later use
+    currentTimeClusterData = optimalCluster;
+    
+    // Update preview
+    updateTimeClusterPreview(optimalCluster, availableMinutes);
+    
+    // Show preview section
+    document.getElementById('cluster-preview').style.display = 'block';
+}
+
+function findOptimalTimeCluster(buildings, maxTime) {
+    // Start with building that has most AEDs per minute
+    let availableBuildings = buildings.slice();
+    const selectedBuildings = [];
+    let totalTime = 0;
+    
+    // Calculate efficiency for each building (AEDs per minute of work)
+    availableBuildings.forEach(building => {
+        building.efficiency = building.aedCount / building.totalTime;
+    });
+    
+    // Sort by efficiency (AEDs per minute) descending
+    availableBuildings.sort((a, b) => b.efficiency - a.efficiency);
+    
+    // Greedily select buildings that fit within time constraint
+    while (availableBuildings.length > 0 && totalTime < maxTime) {
+        let bestBuilding = null;
+        let bestAddedTime = Infinity;
+        
+        // Try to find the best building that still fits
+        for (let i = 0; i < availableBuildings.length; i++) {
+            const building = availableBuildings[i];
+            let addedTime = building.totalTime;
+            
+            // Add travel time if not first building
+            if (selectedBuildings.length > 0) {
+                const lastBuilding = selectedBuildings[selectedBuildings.length - 1];
+                const travelTime = calculateTravelTimeSync(lastBuilding.lat, lastBuilding.lon, building.lat, building.lon, lastBuilding.code, building.code).time;
+                addedTime += travelTime;
+            }
+            
+            // Check if this building fits within time limit
+            if (totalTime + addedTime <= maxTime) {
+                // Prefer buildings with higher efficiency if they fit
+                if (bestBuilding === null || building.efficiency > bestBuilding.efficiency || 
+                   (Math.abs(building.efficiency - bestBuilding.efficiency) < 0.1 && addedTime < bestAddedTime)) {
+                    bestBuilding = building;
+                    bestAddedTime = addedTime;
+                }
+            }
+        }
+        
+        if (bestBuilding === null) {
+            break; // No more buildings fit
+        }
+        
+        selectedBuildings.push(bestBuilding);
+        totalTime += bestAddedTime;
+        
+        // Remove selected building from available
+        availableBuildings = availableBuildings.filter(b => b.code !== bestBuilding.code);
+    }
+    
+    return {
+        path: selectedBuildings,
+        totalTime: totalTime
+    };
+}
+
+function updateTimeClusterPreview(cluster, availableMinutes) {
+    const totalAEDs = cluster.path.reduce((sum, b) => sum + b.aedCount, 0);
+    const efficiency = ((cluster.totalTime / availableMinutes) * 100);
+    
+    document.getElementById('preview-buildings').textContent = cluster.path.length;
+    document.getElementById('preview-aeds').textContent = totalAEDs;
+    document.getElementById('preview-time').textContent = Math.round(cluster.totalTime);
+    document.getElementById('preview-efficiency').textContent = efficiency.toFixed(0);
+    
+    // Update building list
+    const buildingList = document.getElementById('preview-building-list');
+    buildingList.innerHTML = cluster.path.map((building, index) => `
+        <div style="padding: 4px 0; border-bottom: 1px solid #eee; display: flex; justify-content: space-between;">
+            <span>${index + 1}. ${building.code} - ${building.name.substring(0, 30)}${building.name.length > 30 ? '...' : ''}</span>
+            <span style="color: #666; font-size: 0.9em;">${building.aedCount} AEDs, ${Math.round(building.totalTime)} min</span>
+        </div>
+    `).join('');
+}
+
+function executeTimeClusterOption(option) {
+    if (!currentTimeClusterData) {
+        alert('Please calculate a cluster first.');
+        return;
+    }
+    
+    const cluster = currentTimeClusterData;
+    const action = option === 'pluck' ? 'pluck buildings from existing clusters' : 'create cluster and fully recalculate remaining buildings';
+    
+    if (!confirm(`Are you sure you want to ${action}?\n\nThis will create a new Work Block with ${cluster.path.length} buildings.`)) {
+        return;
+    }
+    
+    if (option === 'pluck') {
+        // Remove buildings from existing clusters but don't recalculate others
+        cluster.path.forEach(building => {
+            // Remove from existing clusters
+            currentClusters.forEach(existingCluster => {
+                existingCluster.path = existingCluster.path.filter(b => b.code !== building.code);
+            });
+        });
+        
+        // Remove empty clusters
+        currentClusters = currentClusters.filter(c => c.path.length > 0);
+        
+        // Add new cluster
+        currentClusters.push({
+            path: cluster.path,
+            totalTime: cluster.totalTime
+        });
+        
+        alert(`✅ Successfully plucked ${cluster.path.length} buildings into a new Work Block!\n\nExisting clusters remain unchanged.`);
+        
+    } else {
+        // Full recalculation: remove buildings and recalculate everything
+        const remainingBuildings = buildingData.filter(building => 
+            !cluster.path.some(clusterBuilding => clusterBuilding.code === building.code)
+        );
+        
+        // Generate new clusters with remaining buildings
+        currentClusters = generateClusters(remainingBuildings);
+        
+        // Add the time-based cluster
+        currentClusters.push({
+            path: cluster.path,
+            totalTime: cluster.totalTime
+        });
+        
+        alert(`✅ Successfully created new Work Block and recalculated all clusters!\n\nGenerated ${currentClusters.length - 1} work blocks for remaining buildings plus 1 time-based block.`);
+    }
+    
+    // Update display
+    displayClusters();
+    updateTotalTimeSummary();
+    
+    // Close modal
+    document.getElementById('time-cluster-modal').style.display = 'none';
+    
+    // Clear current data
+    currentTimeClusterData = null;
+    document.getElementById('cluster-preview').style.display = 'none';
+}
 
 // --- ADD BUILDING FUNCTIONALITY ---
 function initializeAddBuildingModal() {
