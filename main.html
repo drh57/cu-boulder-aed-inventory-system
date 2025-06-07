@@ -759,9 +759,9 @@
                 <h2 style="margin: 0; color: #2c3e50;">📋 Building Inventory Spreadsheet</h2>
                 <div class="spreadsheet-controls">
                     <span id="building-stats" style="margin-right: 15px; color: #6c757d;"></span>
-                    <button class="btn-secondary" id="clear-filters-btn">🔄 Clear Filters</button>
-                    <button class="btn-secondary" id="export-csv-btn">📤 Export CSV</button>
-                    <button class="btn-secondary" id="close-spreadsheet-btn">✕ Close</button>
+                    <button class="btn-secondary" onclick="clearAllFilters()">🔄 Clear Filters</button>
+                    <button class="btn-secondary" onclick="exportBuildingData()">📤 Export CSV</button>
+                    <button class="btn-secondary" onclick="closeBuildingSpreadsheet()">✕ Close</button>
                 </div>
             </div>
             <div class="building-table-container">
@@ -5397,22 +5397,6 @@ function initializeBuildingSpreadsheet() {
     // Wait for DOM to be ready
     setTimeout(() => {
         try {
-            // Modal event listeners with error handling
-            const closeBtn = document.getElementById('close-spreadsheet-btn');
-            if (closeBtn) {
-                closeBtn.addEventListener('click', closeBuildingSpreadsheet);
-            }
-            
-            const exportBtn = document.getElementById('export-csv-btn');
-            if (exportBtn) {
-                exportBtn.addEventListener('click', exportBuildingData);
-            }
-            
-            const clearFiltersBtn = document.getElementById('clear-filters-btn');
-            if (clearFiltersBtn) {
-                clearFiltersBtn.addEventListener('click', clearAllFilters);
-            }
-            
             // Close modal when clicking outside
             const modal = document.getElementById('building-list-modal');
             if (modal) {
@@ -5478,6 +5462,11 @@ window.clearAllFilters = clearAllFilters;
 function populateBuildingSpreadsheet() {
     const tableBody = document.getElementById('building-table-body');
     const buildingStats = document.getElementById('building-stats');
+    
+    if (!tableBody || !buildingStats) {
+        console.error('Required spreadsheet elements not found');
+        return;
+    }
     
     // Populate cluster filter options
     populateClusterFilter();
@@ -5572,6 +5561,10 @@ function populateClusterFilter() {
 }
 
 function getFilteredBuildings() {
+    if (!buildingData || buildingData.length === 0) {
+        return [];
+    }
+    
     return buildingData.filter(building => {
         // Find cluster assignment
         let clusterAssignment = 'Unassigned';
