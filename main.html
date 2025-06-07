@@ -1350,6 +1350,9 @@ document.addEventListener('DOMContentLoaded', () => {
     L.control.scale({imperial: false}).addTo(map);
     const mapLayers = L.featureGroup().addTo(map);
     
+    // Initialize add building modal now that map is ready
+    initializeAddBuildingModal();
+    
     // Global variable to store current clusters for PDF generation
     let currentClusters = [];
     let manuallyArranged = false;
@@ -5225,7 +5228,6 @@ document.addEventListener('DOMContentLoaded', () => {
     // Initialize the new functionality
     initializeResizablePanes();
     initializeFocusMode();
-    initializeAddBuildingModal();
     initializeBuildingSpreadsheet();
     initializeTimeClusterModal();
     initializeBuildingStatus();
@@ -5468,17 +5470,11 @@ function clearAllFilters() {
 window.clearAllFilters = clearAllFilters;
 
 function populateBuildingSpreadsheet() {
-    console.log('🔍 populateBuildingSpreadsheet called');
-    console.log('📊 buildingData length:', buildingData ? buildingData.length : 'UNDEFINED');
-    
     const tableBody = document.getElementById('building-table-body');
     const buildingStats = document.getElementById('building-stats');
     
-    console.log('🎯 tableBody found:', !!tableBody);
-    console.log('📈 buildingStats found:', !!buildingStats);
-    
     if (!tableBody || !buildingStats) {
-        console.error('❌ Required spreadsheet elements not found');
+        console.error('Required spreadsheet elements not found');
         return;
     }
     
@@ -5487,11 +5483,6 @@ function populateBuildingSpreadsheet() {
     
     // Filter buildings based on current filters
     const filteredBuildings = getFilteredBuildings();
-    console.log('✅ filteredBuildings length:', filteredBuildings.length);
-    
-    if (filteredBuildings.length > 0) {
-        console.log('🏢 First building sample:', filteredBuildings[0]);
-    }
     
     // Calculate stats
     const totalBuildings = buildingData.length;
@@ -5507,11 +5498,9 @@ function populateBuildingSpreadsheet() {
     
     // Clear existing content
     tableBody.innerHTML = '';
-    console.log('🗑️ Cleared table body, about to add rows...');
     
     // Add rows for filtered buildings
-    filteredBuildings.forEach((building, index) => {
-        console.log(`🏗️ Creating row ${index + 1} for building:`, building.code);
+    filteredBuildings.forEach(building => {
         const row = document.createElement('tr');
         
         // Add checked class for styling
@@ -5556,10 +5545,7 @@ function populateBuildingSpreadsheet() {
         `;
         
         tableBody.appendChild(row);
-        console.log(`✅ Added row for building ${building.code}`);
     });
-    
-    console.log('🎉 Finished adding all rows. Total rows in table:', tableBody.children.length);
     
     // Setup table sorting
     setupTableSorting();
@@ -6227,8 +6213,9 @@ function initializeAddBuildingModal() {
         console.log('New building added:', newBuilding);
     });
     
-    // Enable map clicking for coordinate selection
-    map.on('click', (e) => {
+    // Enable map clicking for coordinate selection (only if map is initialized)
+    if (map && typeof map.on === 'function') {
+        map.on('click', (e) => {
         if (modal.style.display === 'block') {
             const lat = e.latlng.lat.toFixed(6);
             const lon = e.latlng.lng.toFixed(6);
@@ -6260,6 +6247,7 @@ function initializeAddBuildingModal() {
             cancelBtn.addEventListener('click', originalClose, { once: true });
         }
     });
+    }
 }
 
 </script>
