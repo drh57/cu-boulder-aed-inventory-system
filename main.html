@@ -5053,8 +5053,15 @@ document.addEventListener('DOMContentLoaded', () => {
     buildingListBtn.addEventListener('mouseover', () => buildingListBtn.style.backgroundColor = '#138496');
     buildingListBtn.addEventListener('mouseout', () => buildingListBtn.style.backgroundColor = '#17a2b8');
     buildingListBtn.addEventListener('click', () => {
-        document.getElementById('building-list-modal').style.display = 'block';
-        populateBuildingSpreadsheet();
+        console.log('Building List button clicked');
+        const modal = document.getElementById('building-list-modal');
+        if (modal) {
+            modal.style.display = 'block';
+            console.log('Modal opened, calling populateBuildingSpreadsheet');
+            populateBuildingSpreadsheet();
+        } else {
+            console.error('building-list-modal not found');
+        }
     });
     
     // Time-based cluster functionality
@@ -5460,8 +5467,13 @@ function clearAllFilters() {
 window.clearAllFilters = clearAllFilters;
 
 function populateBuildingSpreadsheet() {
+    console.log('populateBuildingSpreadsheet called');
     const tableBody = document.getElementById('building-table-body');
     const buildingStats = document.getElementById('building-stats');
+    
+    console.log('tableBody found:', !!tableBody);
+    console.log('buildingStats found:', !!buildingStats);
+    console.log('buildingData length:', buildingData.length);
     
     if (!tableBody || !buildingStats) {
         console.error('Required spreadsheet elements not found');
@@ -5473,6 +5485,7 @@ function populateBuildingSpreadsheet() {
     
     // Filter buildings based on current filters
     const filteredBuildings = getFilteredBuildings();
+    console.log('filteredBuildings length:', filteredBuildings.length);
     
     // Calculate stats
     const totalBuildings = buildingData.length;
