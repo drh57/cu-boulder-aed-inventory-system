@@ -22,19 +22,30 @@
             height: 100vh;
             overflow: hidden;
         }
+        
+        .main-container {
+            display: flex;
+            width: 100%;
+            height: 100vh;
+            position: relative;
+        }
+        
         #map {
             flex-grow: 1;
             height: 100%;
             border-left: 1px solid #dee2e6;
             cursor: grab;
+            transition: margin-left 0.3s ease;
         }
+        
         .leaflet-marker-icon.leaflet-draggable {
             cursor: move;
         }
+        
         #summary {
             width: 450px;
-            min-width: 300px;
-            max-width: 35%;
+            min-width: 250px;
+            max-width: 60%;
             height: 100%;
             overflow-y: auto;
             padding: 20px;
@@ -43,7 +54,196 @@
             border-right: 1px solid #dee2e6;
             display: flex;
             flex-direction: column;
+            position: relative;
+            transition: width 0.3s ease;
         }
+        
+        /* Resizer handle */
+        .resize-handle {
+            width: 6px;
+            background: #dee2e6;
+            cursor: ew-resize;
+            position: absolute;
+            top: 0;
+            right: -3px;
+            bottom: 0;
+            z-index: 1000;
+            transition: background-color 0.2s;
+            opacity: 0.7;
+        }
+        
+        .resize-handle:hover {
+            background: #007bff;
+            opacity: 1;
+            box-shadow: 0 0 10px rgba(0, 123, 255, 0.3);
+        }
+        
+        .resize-handle.dragging {
+            background: #007bff;
+            opacity: 1;
+            box-shadow: 0 0 15px rgba(0, 123, 255, 0.5);
+        }
+        
+        .resize-handle::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 2px;
+            height: 30px;
+            background: currentColor;
+            border-radius: 1px;
+            opacity: 0.5;
+        }
+        
+        /* Focus mode styles */
+        .focus-mode-controls {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            z-index: 1001;
+        }
+        
+        .focus-toggle {
+            padding: 8px 12px;
+            background: #6c757d;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.8em;
+            transition: background-color 0.2s;
+        }
+        
+        .focus-toggle:hover {
+            background: #5a6268;
+        }
+        
+        .focus-toggle.active {
+            background: #28a745;
+        }
+        
+        .focus-toggle.active:hover {
+            background: #218838;
+        }
+        
+        /* Hidden buttons in focus mode */
+        .button-controls {
+            transition: opacity 0.3s ease, max-height 0.3s ease;
+            overflow: hidden;
+        }
+        
+        .focus-mode .button-controls {
+            opacity: 0;
+            max-height: 0;
+            margin: 0;
+            padding: 0;
+            pointer-events: none;
+        }
+        
+        .focus-mode .instructions {
+            display: none !important;
+        }
+        
+        .focus-mode .summary-header h1 {
+            font-size: 1.2em;
+            margin-bottom: 10px;
+        }
+        
+        /* Enhance work block visibility in focus mode */
+        .focus-mode .cluster {
+            margin-bottom: 15px;
+            border-width: 2px;
+            box-shadow: 0 3px 8px rgba(0,0,0,0.15);
+        }
+        
+        .focus-mode .cluster-header {
+            font-size: 1.1em;
+            padding: 10px 12px;
+        }
+        
+        .focus-mode .cluster li {
+            padding: 10px 12px;
+        }
+        
+        /* Keyboard shortcut hint */
+        .focus-toggle::after {
+            content: ' (F)';
+            font-size: 0.7em;
+            opacity: 0.7;
+        }
+        
+        .focus-toggle.active::after {
+            content: ' (F)';
+        }
+        
+        /* Clustering method selection */
+        .clustering-method-section {
+            margin-bottom: 15px;
+            padding: 12px;
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+        }
+        
+        .clustering-method-section h3 {
+            margin: 0 0 10px 0;
+            font-size: 1em;
+            color: #2c3e50;
+        }
+        
+        .clustering-method-option {
+            margin-bottom: 8px;
+            padding: 8px;
+            border: 1px solid #e9ecef;
+            border-radius: 4px;
+            background: white;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        
+        .clustering-method-option:hover {
+            border-color: #007bff;
+            background: #f8f9ff;
+        }
+        
+        .clustering-method-option.selected {
+            border-color: #007bff;
+            background: #e3f2fd;
+            box-shadow: 0 2px 4px rgba(0,123,255,0.2);
+        }
+        
+        .clustering-method-option input[type="radio"] {
+            margin-right: 8px;
+        }
+        
+        .clustering-method-title {
+            font-weight: bold;
+            color: #2c3e50;
+            margin-bottom: 4px;
+        }
+        
+        .clustering-method-description {
+            font-size: 0.85em;
+            color: #6c757d;
+            line-height: 1.3;
+        }
+        
+        .clustering-badge {
+            display: inline-block;
+            padding: 2px 6px;
+            font-size: 0.7em;
+            border-radius: 3px;
+            margin-left: 6px;
+            font-weight: bold;
+        }
+        
+        .badge-fast { background: #d4edda; color: #155724; }
+        .badge-balanced { background: #fff3cd; color: #856404; }
+        .badge-optimal { background: #cce5ff; color: #004085; }
+        .badge-creative { background: #e2d7ff; color: #4a148c; }
+        
         .summary-header { flex-shrink: 0; }
         .summary-content-wrapper { flex-grow: 1; overflow-y: auto; }
         #summary h1 { font-size: 1.6em; margin-top: 0; margin-bottom: 5px; color: #2c3e50; }
@@ -167,33 +367,111 @@
     </style>
 </head>
 <body>
-    <div id="summary">
-        <div class="summary-header">
-            <h1>AED Inventory Work Blocks</h1>
-            <p class="instructions">
-                The initial pin locations are estimates. <strong>Use the "Improve Building Locations" button to automatically geocode better coordinates, or click and drag any pin on the map to its correct location,</strong> then click "Recalculate Clusters" to regenerate the optimized work blocks.
-            </p>
-            <button id="recalculate-btn">Recalculate Clusters</button>
-            <button id="recalculate-times-btn" style="display: block; width: 100%; padding: 8px; font-size: 0.9em; font-weight: bold; background-color: #f39c12; color: white; border: none; border-radius: 5px; cursor: pointer; margin-bottom: 10px; transition: background-color 0.2s;">Recalculate Times Only</button>
-            
-            <div style="margin-bottom: 10px; padding: 8px; background: #e8f5e8; border: 1px solid #c8e6c9; border-radius: 5px;">
-                <label style="display: flex; align-items: center; font-size: 0.9em; color: #2e7d32; cursor: pointer;">
-                    <input type="checkbox" id="campus-mode" style="margin-right: 8px;">
-                    🏫 Campus Mode (Use direct paths instead of street routing)
-                </label>
-                <small style="color: #555; font-size: 0.8em; margin-top: 4px; display: block;">
-                    Recommended for campus environments where buildings are connected by walkways
-                </small>
+    <div class="main-container">
+        <div id="summary">
+            <div class="resize-handle"></div>
+            <div class="focus-mode-controls">
+                <button class="focus-toggle" id="focus-toggle" title="Toggle Block Focus Mode">
+                    📋 Focus
+                </button>
+            </div>
+            <div class="summary-header">
+                <h1>AED Inventory Work Blocks</h1>
+                <div class="button-controls">
+                    <p class="instructions">
+                        The initial pin locations are estimates. <strong>Use the "Re-geocode All from Addresses" button to automatically geocode better coordinates, or click and drag any pin on the map to its correct location,</strong> then click "Recalculate Clusters" to regenerate the optimized work blocks.
+                    </p>
+                    <div class="clustering-method-section">
+                        <h3>🧠 Clustering Algorithm</h3>
+                        
+                        <div class="clustering-method-option selected" data-method="distance">
+                            <input type="radio" name="clustering-method" value="distance" checked>
+                            <div class="clustering-method-title">
+                                Distance-Based (Current) <span class="clustering-badge badge-fast">FAST</span>
+                            </div>
+                            <div class="clustering-method-description">
+                                Starts with scattered buildings and adds nearest neighbors until time limit reached. Good general-purpose method.
+                            </div>
+                        </div>
+                        
+                        <div class="clustering-method-option" data-method="geographic">
+                            <input type="radio" name="clustering-method" value="geographic">
+                            <div class="clustering-method-title">
+                                Geographic Zones <span class="clustering-badge badge-balanced">BALANCED</span>
+                            </div>
+                            <div class="clustering-method-description">
+                                Divides campus into geographic quadrants and creates work blocks by zone. Ensures even coverage across campus areas.
+                            </div>
+                        </div>
+                        
+                        <div class="clustering-method-option" data-method="time-balanced">
+                            <input type="radio" name="clustering-method" value="time-balanced">
+                            <div class="clustering-method-title">
+                                Time-Balanced <span class="clustering-badge badge-optimal">OPTIMAL</span>
+                            </div>
+                            <div class="clustering-method-description">
+                                Creates clusters with similar total times. Great for distributing workload evenly among team members.
+                            </div>
+                        </div>
+                        
+                        <div class="clustering-method-option" data-method="density">
+                            <input type="radio" name="clustering-method" value="density">
+                            <div class="clustering-method-title">
+                                Density-Based <span class="clustering-badge badge-creative">SMART</span>
+                            </div>
+                            <div class="clustering-method-description">
+                                Groups buildings based on local density and natural campus clusters. Adapts to building distribution patterns.
+                            </div>
+                        </div>
+                        
+                        <div class="clustering-method-option" data-method="building-type">
+                            <input type="radio" name="clustering-method" value="building-type">
+                            <div class="clustering-method-title">
+                                Building Type <span class="clustering-badge badge-creative">SPECIALIZED</span>
+                            </div>
+                            <div class="clustering-method-description">
+                                Groups similar building types together (dorms, academic, admin). Useful for specialized teams or different access requirements.
+                            </div>
+                        </div>
+                        
+                        <div class="clustering-method-option" data-method="route-optimized">
+                            <input type="radio" name="clustering-method" value="route-optimized">
+                            <div class="clustering-method-title">
+                                Route-Optimized <span class="clustering-badge badge-optimal">ADVANCED</span>
+                            </div>
+                            <div class="clustering-method-description">
+                                Uses traveling salesman optimization to minimize total travel time. Best for efficiency but slower to calculate.
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <button id="recalculate-btn">Recalculate Clusters</button>
+                    
+                    <div id="clustering-status" style="margin-top: 8px; padding: 6px 10px; background: #e3f2fd; border: 1px solid #2196f3; border-radius: 4px; font-size: 0.85em; color: #1976d2; text-align: center;">
+                        <strong>🧠 Active Method:</strong> <span id="current-clustering-method">Distance-Based</span>
+                    </div>
+                    <button id="recalculate-times-btn" style="display: block; width: 100%; padding: 8px; font-size: 0.9em; font-weight: bold; background-color: #f39c12; color: white; border: none; border-radius: 5px; cursor: pointer; margin-bottom: 10px; transition: background-color 0.2s;">Recalculate Times Only</button>
+                    
+                    <div style="margin-bottom: 10px; padding: 8px; background: #e8f5e8; border: 1px solid #c8e6c9; border-radius: 5px;">
+                        <label style="display: flex; align-items: center; font-size: 0.9em; color: #2e7d32; cursor: pointer;">
+                            <input type="checkbox" id="campus-mode" style="margin-right: 8px;">
+                            🏫 Campus Mode (Use direct paths instead of street routing)
+                        </label>
+                        <small style="color: #555; font-size: 0.8em; margin-top: 4px; display: block;">
+                            Recommended for campus environments where buildings are connected by walkways
+                        </small>
+                    </div>
+                </div>
+            </div>
+            <div class="summary-content-wrapper">
+                 <div class="loader-container">
+                    <div id="loader" class="loader"></div>
+                    <div id="summary-content"></div>
+                </div>
             </div>
         </div>
-        <div class="summary-content-wrapper">
-             <div class="loader-container">
-                <div id="loader" class="loader"></div>
-                <div id="summary-content"></div>
-            </div>
-        </div>
+        <div id="map"></div>
     </div>
-    <div id="map"></div>
 
 <script>
 // --- FULLY GEOCODED & CONSOLIDATED BUILDING DATA ---
@@ -940,7 +1218,7 @@ document.addEventListener('DOMContentLoaded', () => {
         geocodeContainer.appendChild(geocodeBtn);
         geocodeContainer.appendChild(autoGeocodeBtn);
         geocodeContainer.appendChild(progressContainer);
-        document.querySelector('.summary-header').appendChild(geocodeContainer);
+        document.querySelector('.button-controls').appendChild(geocodeContainer);
     }
 
     // --- ADD ZOOM TO CAMPUS BUTTON ---
@@ -959,7 +1237,7 @@ document.addEventListener('DOMContentLoaded', () => {
             map.setView([40.0076, -105.2659], 15);
         });
         
-        document.querySelector('.summary-header').appendChild(zoomBtn);
+        document.querySelector('.button-controls').appendChild(zoomBtn);
     }
 
     // --- PDF REPORT GENERATION ---
@@ -1671,7 +1949,7 @@ document.addEventListener('DOMContentLoaded', () => {
             };
         });
         
-        document.querySelector('.summary-header').appendChild(globalVarsBtn);
+        document.querySelector('.button-controls').appendChild(globalVarsBtn);
     }
 
     // --- ADD PDF REPORT BUTTON ---
@@ -1718,7 +1996,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
         
-        document.querySelector('.summary-header').appendChild(pdfBtn);
+        document.querySelector('.button-controls').appendChild(pdfBtn);
         
         // Add total time summary below PDF button
         addTotalTimeSummary();
@@ -1733,7 +2011,7 @@ document.addEventListener('DOMContentLoaded', () => {
             padding: 15px; margin-bottom: 20px; text-align: center;
         `;
         
-        document.querySelector('.summary-header').appendChild(summaryDiv);
+        document.querySelector('.button-controls').appendChild(summaryDiv);
         updateTotalTimeSummary();
     }
 
@@ -3911,6 +4189,457 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    // --- CLUSTERING ALGORITHMS ---
+    
+    // Distance-based clustering (original method)
+    function clusterByDistance(buildings) {
+        const clusters = [];
+        let unassignedBuildings = [...buildings];
+
+        while (unassignedBuildings.length > 0) {
+            let currentCluster = { buildings: [], totalTime: 0, path: [] };
+            unassignedBuildings.sort((a, b) => (b.lat - a.lat) || (a.lon - b.lon));
+            
+            let startBuilding = unassignedBuildings.shift();
+            let lastBuilding = startBuilding;
+            currentCluster.buildings.push(startBuilding);
+            currentCluster.totalTime += startBuilding.totalTime;
+            currentCluster.path.push(startBuilding);
+
+            let potentialAddition = true;
+            while(potentialAddition && unassignedBuildings.length > 0) {
+                potentialAddition = false;
+                let nearest = null, minDistance = Infinity, nearestIndex = -1;
+
+                for (let i = 0; i < unassignedBuildings.length; i++) {
+                    const distance = calculateDistance(lastBuilding.lat, lastBuilding.lon, unassignedBuildings[i].lat, unassignedBuildings[i].lon);
+                    if (distance < minDistance) {
+                        minDistance = distance;
+                        nearest = unassignedBuildings[i];
+                        nearestIndex = i;
+                    }
+                }
+
+                if (nearest) {
+                    const travelInfo = calculateTravelTimeSync(lastBuilding.lat, lastBuilding.lon, nearest.lat, nearest.lon, lastBuilding.code, nearest.code);
+                    if (currentCluster.totalTime + travelInfo.time + nearest.totalTime <= MAX_CLUSTER_TIME) {
+                        currentCluster.totalTime += travelInfo.time + nearest.totalTime;
+                        currentCluster.path.push(nearest);
+                        lastBuilding = nearest;
+                        potentialAddition = true;
+                        unassignedBuildings.splice(nearestIndex, 1);
+                    }
+                }
+            }
+            clusters.push(currentCluster);
+        }
+        return clusters;
+    }
+    
+    // Geographic zone clustering
+    function clusterByGeographic(buildings) {
+        // Calculate campus bounds
+        const lats = buildings.map(b => b.lat);
+        const lons = buildings.map(b => b.lon);
+        const minLat = Math.min(...lats);
+        const maxLat = Math.max(...lats);
+        const minLon = Math.min(...lons);
+        const maxLon = Math.max(...lons);
+        
+        const midLat = (minLat + maxLat) / 2;
+        const midLon = (minLon + maxLon) / 2;
+        
+        // Divide into 4 quadrants initially
+        const zones = [
+            { name: 'Northwest', buildings: [], bounds: { minLat: midLat, maxLat, minLon, maxLon: midLon }},
+            { name: 'Northeast', buildings: [], bounds: { minLat: midLat, maxLat, minLon: midLon, maxLon }},
+            { name: 'Southwest', buildings: [], bounds: { minLat, maxLat: midLat, minLon, maxLon: midLon }},
+            { name: 'Southeast', buildings: [], bounds: { minLat, maxLat: midLat, minLon: midLon, maxLon }}
+        ];
+        
+        // Assign buildings to zones
+        buildings.forEach(building => {
+            for (const zone of zones) {
+                const b = zone.bounds;
+                if (building.lat >= b.minLat && building.lat <= b.maxLat && 
+                    building.lon >= b.minLon && building.lon <= b.maxLon) {
+                    zone.buildings.push(building);
+                    break;
+                }
+            }
+        });
+        
+        // Create clusters from zones, splitting large zones if needed
+        const clusters = [];
+        zones.forEach(zone => {
+            if (zone.buildings.length === 0) return;
+            
+            // Calculate total time for this zone
+            let totalZoneTime = zone.buildings.reduce((sum, b) => sum + b.totalTime, 0);
+            
+            if (totalZoneTime <= MAX_CLUSTER_TIME * 1.5) {
+                // Single cluster for this zone
+                const cluster = {
+                    buildings: zone.buildings,
+                    path: optimizeRouteOrder(zone.buildings),
+                    totalTime: 0
+                };
+                cluster.totalTime = calculateClusterTime(cluster.path);
+                clusters.push(cluster);
+            } else {
+                // Split zone into multiple clusters using distance method
+                const zoneClusters = clusterByDistance(zone.buildings);
+                clusters.push(...zoneClusters);
+            }
+        });
+        
+        return clusters;
+    }
+    
+    // Time-balanced clustering
+    function clusterByTimeBalanced(buildings) {
+        const targetClusters = Math.ceil(buildings.length / 8); // Aim for ~8 buildings per cluster
+        const targetTimePerCluster = MAX_CLUSTER_TIME * 0.8; // Target 80% of max time
+        
+        // Sort buildings by work time (descending) to distribute heavy buildings first
+        const sortedBuildings = [...buildings].sort((a, b) => b.totalTime - a.totalTime);
+        const clusters = [];
+        
+        // Initialize clusters
+        for (let i = 0; i < targetClusters; i++) {
+            clusters.push({ buildings: [], path: [], totalTime: 0 });
+        }
+        
+        // Assign buildings to clusters trying to balance times
+        sortedBuildings.forEach(building => {
+            // Find cluster with lowest current time that can fit this building
+            let bestCluster = null;
+            let bestClusterIndex = -1;
+            let minTime = Infinity;
+            
+            clusters.forEach((cluster, index) => {
+                if (cluster.totalTime < minTime && cluster.totalTime + building.totalTime <= MAX_CLUSTER_TIME) {
+                    minTime = cluster.totalTime;
+                    bestCluster = cluster;
+                    bestClusterIndex = index;
+                }
+            });
+            
+            if (bestCluster) {
+                bestCluster.buildings.push(building);
+                bestCluster.totalTime += building.totalTime;
+            } else {
+                // If no cluster can fit it, add to the one with the least time
+                const leastTimeCluster = clusters.reduce((min, cluster) => 
+                    cluster.totalTime < min.totalTime ? cluster : min);
+                leastTimeCluster.buildings.push(building);
+                leastTimeCluster.totalTime += building.totalTime;
+            }
+        });
+        
+        // Optimize routes and recalculate times including travel
+        clusters.forEach(cluster => {
+            if (cluster.buildings.length > 0) {
+                cluster.path = optimizeRouteOrder(cluster.buildings);
+                cluster.totalTime = calculateClusterTime(cluster.path);
+            }
+        });
+        
+        // Remove empty clusters
+        return clusters.filter(cluster => cluster.buildings.length > 0);
+    }
+    
+    // Density-based clustering
+    function clusterByDensity(buildings) {
+        const DENSITY_RADIUS = 200; // meters
+        const clusters = [];
+        let unprocessed = [...buildings];
+        
+        while (unprocessed.length > 0) {
+            // Find the building with the most neighbors within radius
+            let bestSeed = null;
+            let maxNeighbors = -1;
+            let bestNeighborList = [];
+            
+            unprocessed.forEach(building => {
+                const neighbors = unprocessed.filter(other => {
+                    if (other === building) return true;
+                    return calculateDistance(building.lat, building.lon, other.lat, other.lon) <= DENSITY_RADIUS;
+                });
+                
+                if (neighbors.length > maxNeighbors) {
+                    maxNeighbors = neighbors.length;
+                    bestSeed = building;
+                    bestNeighborList = neighbors;
+                }
+            });
+            
+            // Create cluster starting with the densest area
+            const cluster = { buildings: [], path: [], totalTime: 0 };
+            const clusterBuildings = [bestSeed];
+            
+            // Remove seed from unprocessed
+            unprocessed = unprocessed.filter(b => b !== bestSeed);
+            
+            // Add nearby buildings until time limit
+            let totalTime = bestSeed.totalTime;
+            const added = new Set([bestSeed.code]);
+            
+            while (unprocessed.length > 0) {
+                // Find nearest unprocessed building to any building in current cluster
+                let nearest = null;
+                let minDistance = Infinity;
+                let nearestTravel = null;
+                
+                clusterBuildings.forEach(clusterBuilding => {
+                    unprocessed.forEach(candidate => {
+                        const distance = calculateDistance(clusterBuilding.lat, clusterBuilding.lon, candidate.lat, candidate.lon);
+                        if (distance < minDistance) {
+                            minDistance = distance;
+                            nearest = candidate;
+                            nearestTravel = calculateTravelTimeSync(clusterBuilding.lat, clusterBuilding.lon, candidate.lat, candidate.lon, clusterBuilding.code, candidate.code);
+                        }
+                    });
+                });
+                
+                if (nearest && totalTime + nearestTravel.time + nearest.totalTime <= MAX_CLUSTER_TIME) {
+                    clusterBuildings.push(nearest);
+                    totalTime += nearestTravel.time + nearest.totalTime;
+                    unprocessed = unprocessed.filter(b => b !== nearest);
+                    added.add(nearest.code);
+                } else {
+                    break;
+                }
+            }
+            
+            cluster.buildings = clusterBuildings;
+            cluster.path = optimizeRouteOrder(clusterBuildings);
+            cluster.totalTime = calculateClusterTime(cluster.path);
+            clusters.push(cluster);
+        }
+        
+        return clusters;
+    }
+    
+    // Building type clustering
+    function clusterByBuildingType(buildings) {
+        // Categorize buildings by type based on name patterns
+        const categories = {
+            'Residence Halls': [],
+            'Academic Buildings': [],
+            'Athletic/Recreation': [],
+            'Administrative': [],
+            'Research Labs': [],
+            'Other': []
+        };
+        
+        buildings.forEach(building => {
+            const name = building.name.toUpperCase();
+            const code = building.code.toUpperCase();
+            
+            if (name.includes('HALL') && (name.includes('RESIDENCE') || name.includes('DORM') || 
+                code.includes('RES') || name.includes('ATHENS') || name.includes('BAKER'))) {
+                categories['Residence Halls'].push(building);
+            } else if (name.includes('LABORATORY') || name.includes('RESEARCH') || name.includes('LAB') ||
+                      code.includes('LAB') || name.includes('ENGINEERING') || name.includes('SCIENCE')) {
+                categories['Research Labs'].push(building);
+            } else if (name.includes('RECREATION') || name.includes('ATHLETIC') || name.includes('GYM') ||
+                      name.includes('POOL') || name.includes('SPORT') || code.includes('REC')) {
+                categories['Athletic/Recreation'].push(building);
+            } else if (name.includes('ADMIN') || name.includes('OFFICE') || name.includes('CENTER') ||
+                      name.includes('SERVICES') || name.includes('STUDENT')) {
+                categories['Administrative'].push(building);
+            } else if (name.includes('HALL') || name.includes('BUILDING') || name.includes('CLASSROOM')) {
+                categories['Academic Buildings'].push(building);
+            } else {
+                categories['Other'].push(building);
+            }
+        });
+        
+        // Create clusters within each category
+        const clusters = [];
+        Object.entries(categories).forEach(([categoryName, categoryBuildings]) => {
+            if (categoryBuildings.length === 0) return;
+            
+            // Use distance clustering within each category
+            const categoryClusters = clusterByDistance(categoryBuildings);
+            clusters.push(...categoryClusters);
+        });
+        
+        return clusters;
+    }
+    
+    // Route-optimized clustering (advanced)
+    function clusterByRouteOptimized(buildings) {
+        const clusters = [];
+        let unassigned = [...buildings];
+        
+        while (unassigned.length > 0) {
+            // Find optimal starting point (most central)
+            const center = findCentroid(unassigned);
+            let startBuilding = unassigned.reduce((closest, building) => {
+                const distToCenter = calculateDistance(center.lat, center.lon, building.lat, building.lon);
+                const closestDistToCenter = calculateDistance(center.lat, center.lon, closest.lat, closest.lon);
+                return distToCenter < closestDistToCenter ? building : closest;
+            });
+            
+            // Build cluster using nearest neighbor with 2-opt optimization
+            const cluster = { buildings: [], path: [], totalTime: 0 };
+            const clusterBuildings = [startBuilding];
+            unassigned = unassigned.filter(b => b !== startBuilding);
+            
+            let totalTime = startBuilding.totalTime;
+            
+            // Add buildings using nearest neighbor
+            while (unassigned.length > 0) {
+                let bestAddition = null;
+                let bestInsertionCost = Infinity;
+                let bestPosition = -1;
+                
+                unassigned.forEach(candidate => {
+                    // Try inserting candidate at each position in current route
+                    for (let pos = 0; pos <= clusterBuildings.length; pos++) {
+                        const insertionCost = calculateInsertionCost(clusterBuildings, candidate, pos);
+                        const newTotalTime = totalTime + insertionCost + candidate.totalTime;
+                        
+                        if (newTotalTime <= MAX_CLUSTER_TIME && insertionCost < bestInsertionCost) {
+                            bestInsertionCost = insertionCost;
+                            bestAddition = candidate;
+                            bestPosition = pos;
+                        }
+                    }
+                });
+                
+                if (bestAddition) {
+                    clusterBuildings.splice(bestPosition, 0, bestAddition);
+                    totalTime += bestInsertionCost + bestAddition.totalTime;
+                    unassigned = unassigned.filter(b => b !== bestAddition);
+                } else {
+                    break;
+                }
+            }
+            
+            // Apply 2-opt optimization to improve route
+            const optimizedRoute = apply2OptOptimization(clusterBuildings);
+            
+            cluster.buildings = optimizedRoute;
+            cluster.path = optimizedRoute;
+            cluster.totalTime = calculateClusterTime(cluster.path);
+            clusters.push(cluster);
+        }
+        
+        return clusters;
+    }
+    
+    // Helper functions for clustering algorithms
+    function optimizeRouteOrder(buildings) {
+        if (buildings.length <= 2) return buildings;
+        
+        // Simple nearest neighbor optimization
+        const route = [buildings[0]];
+        const remaining = buildings.slice(1);
+        
+        while (remaining.length > 0) {
+            const lastBuilding = route[route.length - 1];
+            let nearestIndex = 0;
+            let minDistance = Infinity;
+            
+            remaining.forEach((building, index) => {
+                const distance = calculateDistance(lastBuilding.lat, lastBuilding.lon, building.lat, building.lon);
+                if (distance < minDistance) {
+                    minDistance = distance;
+                    nearestIndex = index;
+                }
+            });
+            
+            route.push(remaining.splice(nearestIndex, 1)[0]);
+        }
+        
+        return route;
+    }
+    
+    function calculateClusterTime(path) {
+        let totalTime = 0;
+        path.forEach((building, index) => {
+            totalTime += building.totalTime;
+            if (index > 0) {
+                const prevBuilding = path[index - 1];
+                const travelInfo = calculateTravelTimeSync(prevBuilding.lat, prevBuilding.lon, building.lat, building.lon, prevBuilding.code, building.code);
+                totalTime += travelInfo.time;
+            }
+        });
+        return totalTime;
+    }
+    
+    function findCentroid(buildings) {
+        const sumLat = buildings.reduce((sum, b) => sum + b.lat, 0);
+        const sumLon = buildings.reduce((sum, b) => sum + b.lon, 0);
+        return {
+            lat: sumLat / buildings.length,
+            lon: sumLon / buildings.length
+        };
+    }
+    
+    function calculateInsertionCost(route, newBuilding, position) {
+        if (route.length === 0) return 0;
+        if (position === 0) {
+            if (route.length === 1) return 0;
+            const nextBuilding = route[0];
+            return calculateTravelTimeSync(newBuilding.lat, newBuilding.lon, nextBuilding.lat, nextBuilding.lon, newBuilding.code, nextBuilding.code).time;
+        }
+        if (position === route.length) {
+            const prevBuilding = route[route.length - 1];
+            return calculateTravelTimeSync(prevBuilding.lat, prevBuilding.lon, newBuilding.lat, newBuilding.lon, prevBuilding.code, newBuilding.code).time;
+        }
+        
+        const prevBuilding = route[position - 1];
+        const nextBuilding = route[position];
+        
+        const costToNew = calculateTravelTimeSync(prevBuilding.lat, prevBuilding.lon, newBuilding.lat, newBuilding.lon, prevBuilding.code, newBuilding.code).time;
+        const costFromNew = calculateTravelTimeSync(newBuilding.lat, newBuilding.lon, nextBuilding.lat, nextBuilding.lon, newBuilding.code, nextBuilding.code).time;
+        const originalCost = calculateTravelTimeSync(prevBuilding.lat, prevBuilding.lon, nextBuilding.lat, nextBuilding.lon, prevBuilding.code, nextBuilding.code).time;
+        
+        return costToNew + costFromNew - originalCost;
+    }
+    
+    function apply2OptOptimization(route) {
+        if (route.length <= 3) return route;
+        
+        let improved = true;
+        let optimizedRoute = [...route];
+        
+        while (improved) {
+            improved = false;
+            for (let i = 1; i < optimizedRoute.length - 2; i++) {
+                for (let j = i + 1; j < optimizedRoute.length; j++) {
+                    if (j - i === 1) continue;
+                    
+                    const newRoute = optimizedRoute.slice();
+                    // Reverse the order of cities from i to j
+                    newRoute.splice(i, j - i + 1, ...optimizedRoute.slice(i, j + 1).reverse());
+                    
+                    const currentDistance = calculateRouteDistance(optimizedRoute);
+                    const newDistance = calculateRouteDistance(newRoute);
+                    
+                    if (newDistance < currentDistance) {
+                        optimizedRoute = newRoute;
+                        improved = true;
+                    }
+                }
+            }
+        }
+        
+        return optimizedRoute;
+    }
+    
+    function calculateRouteDistance(route) {
+        let totalDistance = 0;
+        for (let i = 0; i < route.length - 1; i++) {
+            totalDistance += calculateDistance(route[i].lat, route[i].lon, route[i + 1].lat, route[i + 1].lon);
+        }
+        return totalDistance;
+    }
+
     // --- MAIN PROCESSING AND RENDERING FUNCTION ---
     function processAndDisplayData() {
         loaderEl.style.display = 'block';
@@ -3934,47 +4663,32 @@ document.addEventListener('DOMContentLoaded', () => {
                 b.assigned = false;
             });
 
-            const clusters = [];
-            let unassignedBuildings = processedBuildingData.filter(b => b.lat != null && b.lon != null);
-
-            while (unassignedBuildings.length > 0) {
-                let currentCluster = { buildings: [], totalTime: 0, path: [] };
-                unassignedBuildings.sort((a, b) => (b.lat - a.lat) || (a.lon - b.lon));
-                
-                let startBuilding = unassignedBuildings.shift();
-                startBuilding.assigned = true;
-
-                let lastBuilding = startBuilding;
-                currentCluster.buildings.push(startBuilding);
-                currentCluster.totalTime += startBuilding.totalTime;
-                currentCluster.path.push(startBuilding);
-
-                let potentialAddition = true;
-                while(potentialAddition && unassignedBuildings.length > 0) {
-                    potentialAddition = false;
-                    let nearest = null, minDistance = Infinity, nearestIndex = -1;
-
-                    for (let i = 0; i < unassignedBuildings.length; i++) {
-                        const distance = calculateDistance(lastBuilding.lat, lastBuilding.lon, unassignedBuildings[i].lat, unassignedBuildings[i].lon);
-                        if (distance < minDistance) {
-                            minDistance = distance;
-                            nearest = unassignedBuildings[i];
-                            nearestIndex = i;
-                        }
-                    }
-
-                    if (nearest) {
-                        const travelInfo = calculateTravelTimeSync(lastBuilding.lat, lastBuilding.lon, nearest.lat, nearest.lon, lastBuilding.code, nearest.code);
-                        if (currentCluster.totalTime + travelInfo.time + nearest.totalTime <= MAX_CLUSTER_TIME) {
-                            currentCluster.totalTime += travelInfo.time + nearest.totalTime;
-                            currentCluster.path.push(nearest);
-                            lastBuilding = nearest;
-                            potentialAddition = true;
-                            unassignedBuildings.splice(nearestIndex, 1);
-                        }
-                    }
-                }
-                clusters.push(currentCluster);
+            // Get selected clustering method
+            const selectedMethod = document.querySelector('input[name="clustering-method"]:checked').value;
+            
+            // Apply selected clustering algorithm
+            let clusters = [];
+            switch (selectedMethod) {
+                case 'distance':
+                    clusters = clusterByDistance(processedBuildingData.filter(b => b.lat != null && b.lon != null));
+                    break;
+                case 'geographic':
+                    clusters = clusterByGeographic(processedBuildingData.filter(b => b.lat != null && b.lon != null));
+                    break;
+                case 'time-balanced':
+                    clusters = clusterByTimeBalanced(processedBuildingData.filter(b => b.lat != null && b.lon != null));
+                    break;
+                case 'density':
+                    clusters = clusterByDensity(processedBuildingData.filter(b => b.lat != null && b.lon != null));
+                    break;
+                case 'building-type':
+                    clusters = clusterByBuildingType(processedBuildingData.filter(b => b.lat != null && b.lon != null));
+                    break;
+                case 'route-optimized':
+                    clusters = clusterByRouteOptimized(processedBuildingData.filter(b => b.lat != null && b.lon != null));
+                    break;
+                default:
+                    clusters = clusterByDistance(processedBuildingData.filter(b => b.lat != null && b.lon != null));
             }
             
             // Store clusters globally for PDF generation
@@ -4238,7 +4952,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
         
-        document.querySelector('.summary-header').appendChild(saveBtn);
+        document.querySelector('.button-controls').appendChild(saveBtn);
     }
     
     function addLoadButton() {
@@ -4314,7 +5028,7 @@ document.addEventListener('DOMContentLoaded', () => {
         
         loadContainer.appendChild(loadBtn);
         loadContainer.appendChild(fileInput);
-        document.querySelector('.summary-header').appendChild(loadContainer);
+        document.querySelector('.button-controls').appendChild(loadContainer);
     }
 
     // --- INITIAL LOAD & EVENT LISTENERS ---
@@ -4366,7 +5080,204 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     
     new ResizeObserver(() => map.invalidateSize()).observe(mapElement);
+    
+    // --- RESIZABLE PANES & FOCUS MODE FUNCTIONALITY ---
+    function initializeResizablePanes() {
+        const resizeHandle = document.querySelector('.resize-handle');
+        const summaryPanel = document.getElementById('summary');
+        const mapElement = document.getElementById('map');
+        let isResizing = false;
+        let startX = 0;
+        let startWidth = 0;
+        
+        resizeHandle.addEventListener('mousedown', (e) => {
+            isResizing = true;
+            startX = e.clientX;
+            startWidth = summaryPanel.offsetWidth;
+            resizeHandle.classList.add('dragging');
+            document.body.style.cursor = 'ew-resize';
+            document.body.style.userSelect = 'none';
+            e.preventDefault();
+        });
+        
+        document.addEventListener('mousemove', (e) => {
+            if (!isResizing) return;
+            
+            const deltaX = e.clientX - startX;
+            const newWidth = startWidth + deltaX;
+            const minWidth = 250;
+            const maxWidth = window.innerWidth * 0.6;
+            
+            if (newWidth >= minWidth && newWidth <= maxWidth) {
+                summaryPanel.style.width = newWidth + 'px';
+                map.invalidateSize(); // Refresh map when panel resizes
+            }
+        });
+        
+        document.addEventListener('mouseup', () => {
+            if (isResizing) {
+                isResizing = false;
+                resizeHandle.classList.remove('dragging');
+                document.body.style.cursor = '';
+                document.body.style.userSelect = '';
+                
+                // Save the current width to localStorage
+                localStorage.setItem('summaryPanelWidth', summaryPanel.offsetWidth);
+            }
+        });
+        
+        // Restore saved width on load
+        const savedWidth = localStorage.getItem('summaryPanelWidth');
+        if (savedWidth) {
+            const width = parseInt(savedWidth);
+            const maxWidth = window.innerWidth * 0.6;
+            if (width >= 250 && width <= maxWidth) {
+                summaryPanel.style.width = width + 'px';
+            }
+        }
+    }
+    
+    function initializeFocusMode() {
+        const focusToggle = document.getElementById('focus-toggle');
+        const summaryPanel = document.getElementById('summary');
+        let focusMode = false;
+        
+        // Restore focus mode state
+        const savedFocusMode = localStorage.getItem('blockFocusMode') === 'true';
+        if (savedFocusMode) {
+            toggleFocusMode(true);
+        }
+        
+        focusToggle.addEventListener('click', () => {
+            toggleFocusMode();
+        });
+        
+        function toggleFocusMode(force = null) {
+            focusMode = force !== null ? force : !focusMode;
+            
+            if (focusMode) {
+                summaryPanel.classList.add('focus-mode');
+                focusToggle.classList.add('active');
+                focusToggle.textContent = '📋 Exit Focus';
+                focusToggle.title = 'Exit Block Focus Mode';
+            } else {
+                summaryPanel.classList.remove('focus-mode');
+                focusToggle.classList.remove('active');
+                focusToggle.textContent = '📋 Focus';
+                focusToggle.title = 'Enter Block Focus Mode - Hide buttons for better work block view';
+            }
+            
+            // Save focus mode state
+            localStorage.setItem('blockFocusMode', focusMode);
+            
+            // Trigger map resize after a brief delay to account for layout changes
+            setTimeout(() => {
+                map.invalidateSize();
+            }, 100);
+        }
+        
+        // Add keyboard shortcut for focus mode (F key)
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'f' || e.key === 'F') {
+                // Only trigger if not typing in an input field
+                if (!e.target.matches('input, textarea, select')) {
+                    e.preventDefault();
+                    toggleFocusMode();
+                }
+            }
+        });
+    }
+    
+    // Initialize the new functionality
+    initializeResizablePanes();
+    initializeFocusMode();
+    initializeClusteringMethodSelection();
 });
+
+// --- CLUSTERING METHOD SELECTION ---
+function initializeClusteringMethodSelection() {
+    const clusteringOptions = document.querySelectorAll('.clustering-method-option');
+    const radioButtons = document.querySelectorAll('input[name="clustering-method"]');
+    
+    // Handle option clicking (including the labels)
+    clusteringOptions.forEach(option => {
+        option.addEventListener('click', (e) => {
+            // Remove selected class from all options
+            clusteringOptions.forEach(opt => opt.classList.remove('selected'));
+            
+            // Add selected class to clicked option
+            option.classList.add('selected');
+            
+            // Check the radio button
+            const radio = option.querySelector('input[type="radio"]');
+            if (radio) {
+                radio.checked = true;
+            }
+            
+            // Save the selected method
+            localStorage.setItem('clusteringMethod', radio.value);
+            
+            // Update status indicator
+            updateClusteringStatus(radio.value);
+        });
+    });
+    
+    // Handle radio button changes directly
+    radioButtons.forEach(radio => {
+        radio.addEventListener('change', () => {
+            if (radio.checked) {
+                // Update visual selection
+                clusteringOptions.forEach(opt => opt.classList.remove('selected'));
+                const parentOption = radio.closest('.clustering-method-option');
+                if (parentOption) {
+                    parentOption.classList.add('selected');
+                }
+                
+                // Save the selected method
+                localStorage.setItem('clusteringMethod', radio.value);
+                
+                // Update status indicator
+                updateClusteringStatus(radio.value);
+            }
+        });
+    });
+    
+    // Restore saved clustering method
+    const savedMethod = localStorage.getItem('clusteringMethod');
+    if (savedMethod) {
+        const savedRadio = document.querySelector(`input[name="clustering-method"][value="${savedMethod}"]`);
+        if (savedRadio) {
+            savedRadio.checked = true;
+            const parentOption = savedRadio.closest('.clustering-method-option');
+            if (parentOption) {
+                // Remove selected class from all options
+                clusteringOptions.forEach(opt => opt.classList.remove('selected'));
+                // Add to the saved option
+                parentOption.classList.add('selected');
+            }
+            updateClusteringStatus(savedMethod);
+        }
+    } else {
+        // Initialize with default method
+        updateClusteringStatus('distance');
+    }
+}
+
+function updateClusteringStatus(method) {
+    const statusElement = document.getElementById('current-clustering-method');
+    if (statusElement) {
+        const methodNames = {
+            'distance': 'Distance-Based',
+            'geographic': 'Geographic Zones',
+            'time-balanced': 'Time-Balanced',
+            'density': 'Density-Based',
+            'building-type': 'Building Type',
+            'route-optimized': 'Route-Optimized'
+        };
+        statusElement.textContent = methodNames[method] || 'Distance-Based';
+    }
+}
+
 </script>
 </body>
 </html>
