@@ -1298,6 +1298,18 @@ let METERS_PER_MINUTE_DRIVING = (DRIVING_SPEED_MPH * 1609.34) / 60;
 let MAX_CLUSTER_TIME = 240;
 let AVAILABLE_WORKERS = 10;
 
+// Building filter state for spreadsheet
+let buildingFilters = {
+    status: '',
+    code: '',
+    name: '',
+    gsf: '',
+    aeds: '',
+    cluster: '',
+    lat: '',
+    lon: ''
+};
+
 document.addEventListener('DOMContentLoaded', () => {
     const summaryContentEl = document.getElementById('summary-content');
     const loaderEl = document.getElementById('loader');
@@ -4320,6 +4332,9 @@ document.addEventListener('DOMContentLoaded', () => {
         }, 200);
     };
 
+    // Make displayClusters globally accessible
+    window.displayClusters = displayClusters;
+
     // Get visible clusters for PDF generation
     function getVisibleClusters() {
         return currentClusters.filter((cluster, index) => clusterVisibility[index] !== false);
@@ -5363,8 +5378,7 @@ function toggleBuildingStatusInSpreadsheet(buildingCode) {
 // Make it globally accessible
 window.toggleBuildingStatusInSpreadsheet = toggleBuildingStatusInSpreadsheet;
 
-// Make displayClusters globally accessible
-window.displayClusters = displayClusters;
+
 
 // Make function globally accessible
 window.markClusterAsChecked = function(clusterIndex) {
@@ -5409,16 +5423,6 @@ window.markClusterAsChecked = function(clusterIndex) {
 };
 
 // --- BUILDING SPREADSHEET FUNCTIONALITY ---
-let buildingFilters = {
-    status: '',
-    code: '',
-    name: '',
-    gsf: '',
-    aeds: '',
-    cluster: '',
-    lat: '',
-    lon: ''
-};
 
 function initializeBuildingSpreadsheet() {
     // Wait for DOM to be ready
