@@ -1342,6 +1342,9 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- LEAFLET MAP & LAYER GROUP SETUP ---
     const map = L.map(mapElement).setView([40.0076, -105.2659], 14);
     
+    // Make map globally accessible
+    window.map = map;
+    
     // Add multiple base layers for better building identification
     const osmLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
@@ -5521,6 +5524,17 @@ function clearAllFilters() {
 // Make functions globally accessible for button clicks
 window.clearAllFilters = clearAllFilters;
 
+// Global function to view building on map and close spreadsheet
+window.viewBuildingOnMap = function(lat, lon) {
+    if (window.map && typeof window.map.setView === 'function') {
+        window.map.setView([lat, lon], 18);
+        closeBuildingSpreadsheet();
+    } else {
+        console.error('Map is not available');
+        alert('❌ Error: Map is not available');
+    }
+};
+
 function populateBuildingSpreadsheet() {
     const tableBody = document.getElementById('building-table-body');
     const buildingStats = document.getElementById('building-stats');
@@ -5591,7 +5605,7 @@ function populateBuildingSpreadsheet() {
                         style="padding: 4px 8px; font-size: 0.8em; background: #007bff; color: white; border: none; border-radius: 3px; cursor: pointer; margin-right: 5px;">
                     Edit
                 </button>
-                <button onclick="map.setView([${building.lat}, ${building.lon}], 18); closeBuildingSpreadsheet();" 
+                <button onclick="window.viewBuildingOnMap(${building.lat}, ${building.lon});" 
                         style="padding: 4px 8px; font-size: 0.8em; background: #28a745; color: white; border: none; border-radius: 3px; cursor: pointer;">
                     View
                 </button>
