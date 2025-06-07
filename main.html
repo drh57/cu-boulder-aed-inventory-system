@@ -5271,30 +5271,43 @@ function toggleBuildingStatus(buildingCode, updateClusters = true) {
     return false;
 }
 
-function markClusterAsChecked(clusterIndex) {
-    if (currentClusters[clusterIndex]) {
-        const cluster = currentClusters[clusterIndex];
-        let changedCount = 0;
-        
-        cluster.path.forEach(building => {
-            if (!building.checked) {
-                building.checked = true;
-                changedCount++;
-                
-                // Update in main building data too
-                const mainBuilding = buildingData.find(b => b.code === building.code);
-                if (mainBuilding) {
-                    mainBuilding.checked = true;
-                }
-            }
-        });
-        
-        saveBuildingStatus();
-        displayClusters();
-        
-        alert(`✅ Marked ${changedCount} buildings in Work Block ${clusterIndex + 1} as checked!`);
+// Make function globally accessible
+window.markClusterAsChecked = function(clusterIndex) {
+    console.log(`markClusterAsChecked called with index: ${clusterIndex}`);
+    
+    if (!currentClusters || !currentClusters[clusterIndex]) {
+        console.error(`Invalid cluster index: ${clusterIndex}. Available clusters:`, currentClusters);
+        alert('❌ Error: Invalid work block selected');
+        return;
     }
-}
+    
+    const cluster = currentClusters[clusterIndex];
+    let changedCount = 0;
+    
+    console.log(`Processing Work Block ${clusterIndex + 1} with ${cluster.path.length} buildings`);
+    
+    cluster.path.forEach(building => {
+        if (!building.checked) {
+            building.checked = true;
+            changedCount++;
+            
+            // Update in main building data too
+            const mainBuilding = buildingData.find(b => b.code === building.code);
+            if (mainBuilding) {
+                mainBuilding.checked = true;
+            }
+        }
+    });
+    
+    saveBuildingStatus();
+    displayClusters();
+    
+    // Also refresh spreadsheet if it's open
+    refreshSpreadsheet();
+    
+    console.log(`Marked ${changedCount} buildings as checked in Work Block ${clusterIndex + 1}`);
+    alert(`✅ Marked ${changedCount} buildings in Work Block ${clusterIndex + 1} as checked!`);
+};
 
 // --- BUILDING SPREADSHEET FUNCTIONALITY ---
 let buildingFilters = {
