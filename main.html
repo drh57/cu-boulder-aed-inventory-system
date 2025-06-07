@@ -722,7 +722,7 @@ document.addEventListener('DOMContentLoaded', () => {
         
         const geocodeBtn = document.createElement('button');
         geocodeBtn.id = 'geocode-btn';
-        geocodeBtn.textContent = 'Improve Building Locations';
+        geocodeBtn.textContent = 'Re-geocode All from Addresses';
         geocodeBtn.style.cssText = `
             display: block; width: 100%; padding: 8px; font-size: 0.9em; font-weight: bold;
             background-color: #e74c3c; color: white; border: none; border-radius: 5px;
@@ -754,7 +754,7 @@ document.addEventListener('DOMContentLoaded', () => {
         `;
         
         geocodeBtn.addEventListener('click', async () => {
-            geocodeBtn.textContent = 'Geocoding in Progress...';
+            geocodeBtn.textContent = 'Re-geocoding from addresses...';
             geocodeBtn.disabled = true;
             geocodeBtn.style.backgroundColor = '#6c757d';
             geocodeBtn.style.cursor = 'not-allowed';
@@ -774,8 +774,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 const building = buildingData[i];
                 processed = i + 1;
                 
+                // Get the address for this building
+                const buildingAddress = getBuildingAddress(building.code, building.name);
+                
                 // Update progress text
-                progressText.textContent = `Processing: ${building.code} - ${building.name.substring(0, 40)}${building.name.length > 40 ? '...' : ''}`;
+                progressText.textContent = `Geocoding ${building.code} from: ${buildingAddress.substring(0, 50)}${buildingAddress.length > 50 ? '...' : ''}`;
                 
                 // Update progress bar
                 const percentage = (processed / total) * 100;
@@ -784,13 +787,22 @@ document.addEventListener('DOMContentLoaded', () => {
                 // Update stats
                 progressStats.textContent = `${processed} of ${total} buildings processed • ${improved} improved`;
                 
-                // Attempt geocoding
+                // Attempt geocoding using the building's address
                 try {
-                    const result = await geocodeBuilding(building.name, building.code);
+                    // Store the original address to preserve it
+                    const originalAddress = buildingAddresses[building.code] || buildingAddress;
+                    
+                    // Geocode using the address (suppress alerts for batch processing)
+                    const result = await geocodeAddress(buildingAddress, true);
                     if (result) {
+                        // Auto-accept the new coordinates
                         building.lat = result.lat;
                         building.lon = result.lon;
+                        // Keep the original address string unchanged
+                        buildingAddresses[building.code] = originalAddress;
                         improved++;
+                        
+                        console.log(`✅ Re-geocoded ${building.code} to ${result.lat}, ${result.lon} using address: ${buildingAddress}`);
                         
                         // Update improved count in real-time
                         progressStats.textContent = `${processed} of ${total} buildings processed • ${improved} improved`;
@@ -798,6 +810,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         // Brief green flash for successful geocoding
                         progressBar.style.background = '#28a745';
                     } else {
+                        console.log(`❌ Could not geocode ${building.code} from address: ${buildingAddress}`);
                         // Brief yellow flash for no result
                         progressBar.style.background = '#ffc107';
                         setTimeout(() => progressBar.style.background = '#28a745', 200);
@@ -810,23 +823,23 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
                 
                 // Respectful delay for geocoding service
-                await new Promise(resolve => setTimeout(resolve, 600));
+                await new Promise(resolve => setTimeout(resolve, 800));
             }
             
             // Final completion state
-            progressText.textContent = `Completed! ${improved} building locations improved.`;
+            progressText.textContent = `Completed! ${improved} building locations updated from addresses.`;
             progressStats.textContent = `${total} of ${total} buildings processed • ${improved} improved`;
             progressBar.style.width = '100%';
             progressBar.style.background = '#28a745';
             
             // Update button
-            geocodeBtn.textContent = `Improved ${improved} locations`;
+            geocodeBtn.textContent = `Updated ${improved} locations`;
             geocodeBtn.style.backgroundColor = '#28a745';
             
             // Hide progress after delay and reset button
             setTimeout(() => {
                 progressContainer.style.display = 'none';
-                geocodeBtn.textContent = 'Improve Building Locations';
+                geocodeBtn.textContent = 'Re-geocode All from Addresses';
                 geocodeBtn.disabled = false;
                 geocodeBtn.style.backgroundColor = '#e74c3c';
                 geocodeBtn.style.cursor = 'pointer';
@@ -863,7 +876,7 @@ document.addEventListener('DOMContentLoaded', () => {
             );
             
             if (buildingsNeedingGeocode.length === 0) {
-                alert('All buildings already have addresses! Use the "Improve Building Locations" button to re-geocode existing addresses.');
+                alert('All buildings already have addresses! Use the "Re-geocode All from Addresses" button to re-geocode existing addresses.');
                 return;
             }
             
@@ -2300,9 +2313,11 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     // --- GEOCODING FUNCTIONALITY ---
-    async function geocodeAddress(address) {
+    async function geocodeAddress(address, suppressAlerts = false) {
         if (!address || address.trim() === '') {
-            alert('Please enter an address to geocode.');
+            if (!suppressAlerts) {
+                alert('Please enter an address to geocode.');
+            }
             return null;
         }
         
@@ -2330,7 +2345,9 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         } catch (error) {
             console.error('Geocoding error:', error);
-            alert(`Could not find location for "${address}". Please check the address or enter coordinates manually.\n\nError: ${error.message}`);
+            if (!suppressAlerts) {
+                alert(`Could not find location for "${address}". Please check the address or enter coordinates manually.\n\nError: ${error.message}`);
+            }
             return null;
         }
     }
