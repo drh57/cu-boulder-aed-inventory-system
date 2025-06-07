@@ -5292,7 +5292,9 @@ function toggleBuildingStatus(buildingCode, updateClusters = true) {
         
         if (updateClusters) {
             // Update display to show checked status
-            displayClusters();
+            if (window.displayClusters) {
+                window.displayClusters();
+            }
         }
         
         console.log(`Building ${buildingCode} marked as ${building.checked ? 'checked' : 'unchecked'}`);
@@ -5393,7 +5395,9 @@ window.markClusterAsChecked = function(clusterIndex) {
     });
     
     saveBuildingStatus();
-    displayClusters();
+    if (window.displayClusters) {
+        window.displayClusters();
+    }
     
     // Also refresh spreadsheet if it's open - add small delay to ensure updates are processed
     setTimeout(() => {
@@ -6124,7 +6128,9 @@ function executeTimeClusterOption(option) {
     }
     
     // Update display
-    displayClusters();
+    if (window.displayClusters) {
+        window.displayClusters();
+    }
     updateTotalTimeSummary();
     
     // Close modal
