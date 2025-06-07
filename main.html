@@ -386,6 +386,23 @@
             opacity: 0.5;
         }
         
+        .filter-row th {
+            background-color: #e9ecef !important;
+            padding: 4px 8px !important;
+            border-bottom: 2px solid #dee2e6 !important;
+        }
+        
+        .filter-input {
+            border: 1px solid #ced4da;
+            border-radius: 3px;
+            outline: none;
+        }
+        
+        .filter-input:focus {
+            border-color: #007bff;
+            box-shadow: 0 0 3px rgba(0,123,255,0.3);
+        }
+        
         /* Time-based cluster modal */
         .time-cluster-modal {
             display: none;
@@ -742,6 +759,7 @@
                 <h2 style="margin: 0; color: #2c3e50;">📋 Building Inventory Spreadsheet</h2>
                 <div class="spreadsheet-controls">
                     <span id="building-stats" style="margin-right: 15px; color: #6c757d;"></span>
+                    <button class="btn-secondary" id="clear-filters-btn">🔄 Clear Filters</button>
                     <button class="btn-secondary" id="export-csv-btn">📤 Export CSV</button>
                     <button class="btn-secondary" id="close-spreadsheet-btn">✕ Close</button>
                 </div>
@@ -759,6 +777,28 @@
                             <th data-sort="lat">Latitude <span class="sort-indicator">↕</span></th>
                             <th data-sort="lon">Longitude <span class="sort-indicator">↕</span></th>
                             <th>Actions</th>
+                        </tr>
+                        <tr class="filter-row">
+                            <th>
+                                <select id="filter-status" class="filter-input" style="width: 100%; padding: 4px; font-size: 12px;">
+                                    <option value="">All Status</option>
+                                    <option value="checked">Checked</option>
+                                    <option value="unchecked">Unchecked</option>
+                                </select>
+                            </th>
+                            <th><input type="text" id="filter-code" class="filter-input" placeholder="Filter code..." style="width: 100%; padding: 4px; font-size: 12px;"></th>
+                            <th><input type="text" id="filter-name" class="filter-input" placeholder="Filter name..." style="width: 100%; padding: 4px; font-size: 12px;"></th>
+                            <th><input type="number" id="filter-gsf" class="filter-input" placeholder="Min GSF" style="width: 100%; padding: 4px; font-size: 12px;"></th>
+                            <th><input type="number" id="filter-aeds" class="filter-input" placeholder="Min AEDs" style="width: 100%; padding: 4px; font-size: 12px;"></th>
+                            <th>
+                                <select id="filter-cluster" class="filter-input" style="width: 100%; padding: 4px; font-size: 12px;">
+                                    <option value="">All Clusters</option>
+                                    <option value="Unassigned">Unassigned</option>
+                                </select>
+                            </th>
+                            <th><input type="number" id="filter-lat" class="filter-input" placeholder="Min Lat" step="any" style="width: 100%; padding: 4px; font-size: 12px;"></th>
+                            <th><input type="number" id="filter-lon" class="filter-input" placeholder="Min Lon" step="any" style="width: 100%; padding: 4px; font-size: 12px;"></th>
+                            <th style="text-align: center; color: #6c757d; font-size: 12px;">Filters</th>
                         </tr>
                     </thead>
                     <tbody id="building-table-body">
@@ -5257,38 +5297,120 @@ function markClusterAsChecked(clusterIndex) {
 }
 
 // --- BUILDING SPREADSHEET FUNCTIONALITY ---
+let buildingFilters = {
+    status: '',
+    code: '',
+    name: '',
+    gsf: '',
+    aeds: '',
+    cluster: '',
+    lat: '',
+    lon: ''
+};
+
 function initializeBuildingSpreadsheet() {
-    // Modal event listeners
-    document.getElementById('close-spreadsheet-btn').addEventListener('click', () => {
-        document.getElementById('building-list-modal').style.display = 'none';
-    });
+    // Wait for DOM to be ready
+    setTimeout(() => {
+        try {
+            // Modal event listeners with error handling
+            const closeBtn = document.getElementById('close-spreadsheet-btn');
+            if (closeBtn) {
+                closeBtn.addEventListener('click', closeBuildingSpreadsheet);
+            }
+            
+            const exportBtn = document.getElementById('export-csv-btn');
+            if (exportBtn) {
+                exportBtn.addEventListener('click', exportBuildingData);
+            }
+            
+            const clearFiltersBtn = document.getElementById('clear-filters-btn');
+            if (clearFiltersBtn) {
+                clearFiltersBtn.addEventListener('click', clearAllFilters);
+            }
+            
+            // Close modal when clicking outside
+            const modal = document.getElementById('building-list-modal');
+            if (modal) {
+                modal.addEventListener('click', (e) => {
+                    if (e.target.id === 'building-list-modal') {
+                        closeBuildingSpreadsheet();
+                    }
+                });
+            }
+            
+            // Setup filter event listeners
+            setupFilterListeners();
+            
+        } catch (error) {
+            console.error('Error initializing building spreadsheet:', error);
+        }
+    }, 100);
+}
+
+function closeBuildingSpreadsheet() {
+    try {
+        const modal = document.getElementById('building-list-modal');
+        if (modal) {
+            modal.style.display = 'none';
+        }
+    } catch (error) {
+        console.error('Error closing spreadsheet:', error);
+    }
+}
+
+function setupFilterListeners() {
+    const filterIds = ['filter-status', 'filter-code', 'filter-name', 'filter-gsf', 'filter-aeds', 'filter-cluster', 'filter-lat', 'filter-lon'];
     
-    document.getElementById('export-csv-btn').addEventListener('click', exportBuildingData);
-    
-    // Close modal when clicking outside
-    document.getElementById('building-list-modal').addEventListener('click', (e) => {
-        if (e.target.id === 'building-list-modal') {
-            document.getElementById('building-list-modal').style.display = 'none';
+    filterIds.forEach(id => {
+        const element = document.getElementById(id);
+        if (element) {
+            element.addEventListener('input', applyFilters);
+            element.addEventListener('change', applyFilters);
         }
     });
+}
+
+function clearAllFilters() {
+    // Reset all filter values
+    Object.keys(buildingFilters).forEach(key => {
+        buildingFilters[key] = '';
+        const element = document.getElementById(`filter-${key}`);
+        if (element) {
+            element.value = '';
+        }
+    });
+    
+    // Re-populate without filters
+    populateBuildingSpreadsheet();
 }
 
 function populateBuildingSpreadsheet() {
     const tableBody = document.getElementById('building-table-body');
     const buildingStats = document.getElementById('building-stats');
     
+    // Populate cluster filter options
+    populateClusterFilter();
+    
+    // Filter buildings based on current filters
+    const filteredBuildings = getFilteredBuildings();
+    
     // Calculate stats
     const totalBuildings = buildingData.length;
+    const filteredCount = filteredBuildings.length;
     const checkedBuildings = buildingData.filter(b => b.checked).length;
     const uncheckedBuildings = totalBuildings - checkedBuildings;
     
-    buildingStats.textContent = `${totalBuildings} buildings • ${checkedBuildings} checked • ${uncheckedBuildings} remaining`;
+    const statsText = filteredCount === totalBuildings 
+        ? `${totalBuildings} buildings • ${checkedBuildings} checked • ${uncheckedBuildings} remaining`
+        : `${filteredCount} of ${totalBuildings} buildings shown • ${checkedBuildings} checked • ${uncheckedBuildings} remaining`;
+    
+    buildingStats.textContent = statsText;
     
     // Clear existing content
     tableBody.innerHTML = '';
     
-    // Add rows for each building
-    buildingData.forEach(building => {
+    // Add rows for filtered buildings
+    filteredBuildings.forEach(building => {
         const row = document.createElement('tr');
         
         // Add checked class for styling
@@ -5325,7 +5447,7 @@ function populateBuildingSpreadsheet() {
                         style="padding: 4px 8px; font-size: 0.8em; background: #007bff; color: white; border: none; border-radius: 3px; cursor: pointer; margin-right: 5px;">
                     Edit
                 </button>
-                <button onclick="map.setView([${building.lat}, ${building.lon}], 18); document.getElementById('building-list-modal').style.display = 'none';" 
+                <button onclick="map.setView([${building.lat}, ${building.lon}], 18); closeBuildingSpreadsheet();" 
                         style="padding: 4px 8px; font-size: 0.8em; background: #28a745; color: white; border: none; border-radius: 3px; cursor: pointer;">
                     View
                 </button>
@@ -5339,9 +5461,92 @@ function populateBuildingSpreadsheet() {
     setupTableSorting();
 }
 
+function populateClusterFilter() {
+    const clusterFilter = document.getElementById('filter-cluster');
+    if (!clusterFilter) return;
+    
+    // Get existing options
+    const existingOptions = Array.from(clusterFilter.options).map(opt => opt.value);
+    
+    // Add work block options that don't already exist
+    currentClusters.forEach((cluster, index) => {
+        const workBlockName = `Work Block ${index + 1}`;
+        if (!existingOptions.includes(workBlockName)) {
+            const option = document.createElement('option');
+            option.value = workBlockName;
+            option.textContent = workBlockName;
+            clusterFilter.appendChild(option);
+        }
+    });
+}
+
+function getFilteredBuildings() {
+    return buildingData.filter(building => {
+        // Find cluster assignment
+        let clusterAssignment = 'Unassigned';
+        currentClusters.forEach((cluster, index) => {
+            if (cluster.path.some(b => b.code === building.code)) {
+                clusterAssignment = `Work Block ${index + 1}`;
+            }
+        });
+        
+        // Apply filters
+        if (buildingFilters.status) {
+            if (buildingFilters.status === 'checked' && !building.checked) return false;
+            if (buildingFilters.status === 'unchecked' && building.checked) return false;
+        }
+        
+        if (buildingFilters.code && !building.code.toLowerCase().includes(buildingFilters.code.toLowerCase())) {
+            return false;
+        }
+        
+        if (buildingFilters.name && !building.name.toLowerCase().includes(buildingFilters.name.toLowerCase())) {
+            return false;
+        }
+        
+        if (buildingFilters.gsf && (building.gsf || 0) < parseInt(buildingFilters.gsf)) {
+            return false;
+        }
+        
+        if (buildingFilters.aeds && building.aedCount < parseInt(buildingFilters.aeds)) {
+            return false;
+        }
+        
+        if (buildingFilters.cluster && clusterAssignment !== buildingFilters.cluster) {
+            return false;
+        }
+        
+        if (buildingFilters.lat && building.lat < parseFloat(buildingFilters.lat)) {
+            return false;
+        }
+        
+        if (buildingFilters.lon && building.lon < parseFloat(buildingFilters.lon)) {
+            return false;
+        }
+        
+        return true;
+    });
+}
+
+function applyFilters() {
+    // Update filter object from inputs
+    buildingFilters.status = document.getElementById('filter-status')?.value || '';
+    buildingFilters.code = document.getElementById('filter-code')?.value || '';
+    buildingFilters.name = document.getElementById('filter-name')?.value || '';
+    buildingFilters.gsf = document.getElementById('filter-gsf')?.value || '';
+    buildingFilters.aeds = document.getElementById('filter-aeds')?.value || '';
+    buildingFilters.cluster = document.getElementById('filter-cluster')?.value || '';
+    buildingFilters.lat = document.getElementById('filter-lat')?.value || '';
+    buildingFilters.lon = document.getElementById('filter-lon')?.value || '';
+    
+    // Re-populate table with filtered results
+    populateBuildingSpreadsheet();
+}
+
 function refreshSpreadsheet() {
     // Update stats and re-render if spreadsheet is open
-    if (document.getElementById('building-list-modal').style.display === 'block') {
+    const modal = document.getElementById('building-list-modal');
+    if (modal && modal.style.display === 'block') {
         populateBuildingSpreadsheet();
     }
 }
@@ -5371,6 +5576,8 @@ let currentSortDirection = 'asc';
 function sortBuildingTable(sortKey) {
     const tableBody = document.getElementById('building-table-body');
     const rows = Array.from(tableBody.querySelectorAll('tr'));
+    
+    if (rows.length === 0) return; // No data to sort
     
     // Toggle direction if same key
     if (currentSortKey === sortKey) {
@@ -5445,11 +5652,27 @@ function sortBuildingTable(sortKey) {
 }
 
 function exportBuildingData() {
+    const filteredBuildings = getFilteredBuildings();
+    const allBuildings = buildingData;
+    
+    let buildingsToExport;
+    let filename;
+    
+    // Ask user if they want filtered or all data
+    if (filteredBuildings.length < allBuildings.length) {
+        const choice = confirm(`Export Options:\n\nOK = Export ${filteredBuildings.length} filtered buildings\nCancel = Export all ${allBuildings.length} buildings`);
+        buildingsToExport = choice ? filteredBuildings : allBuildings;
+        filename = choice ? 'filtered_buildings' : 'all_buildings';
+    } else {
+        buildingsToExport = allBuildings;
+        filename = 'all_buildings';
+    }
+    
     const headers = ['Status', 'Code', 'Name', 'GSF', 'AED_Count', 'Cluster', 'Latitude', 'Longitude', 'Checked'];
     
     const csvData = [headers];
     
-    buildingData.forEach(building => {
+    buildingsToExport.forEach(building => {
         // Find cluster assignment
         let clusterAssignment = 'Unassigned';
         currentClusters.forEach((cluster, index) => {
@@ -5479,11 +5702,13 @@ function exportBuildingData() {
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `building_inventory_${new Date().toISOString().split('T')[0]}.csv`;
+    a.download = `${filename}_${new Date().toISOString().split('T')[0]}.csv`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
     window.URL.revokeObjectURL(url);
+    
+    console.log(`Exported ${buildingsToExport.length} buildings to CSV`);
 }
 
 // --- TIME-BASED CLUSTER FUNCTIONALITY ---
