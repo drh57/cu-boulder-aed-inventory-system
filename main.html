@@ -5053,14 +5053,13 @@ document.addEventListener('DOMContentLoaded', () => {
     buildingListBtn.addEventListener('mouseover', () => buildingListBtn.style.backgroundColor = '#138496');
     buildingListBtn.addEventListener('mouseout', () => buildingListBtn.style.backgroundColor = '#17a2b8');
     buildingListBtn.addEventListener('click', () => {
-        console.log('Building List button clicked');
         const modal = document.getElementById('building-list-modal');
         if (modal) {
             modal.style.display = 'block';
-            console.log('Modal opened, calling populateBuildingSpreadsheet');
-            populateBuildingSpreadsheet();
-        } else {
-            console.error('building-list-modal not found');
+            // Add small delay to ensure modal is fully rendered
+            setTimeout(() => {
+                populateBuildingSpreadsheet();
+            }, 50);
         }
     });
     
@@ -5381,8 +5380,10 @@ window.markClusterAsChecked = function(clusterIndex) {
     saveBuildingStatus();
     displayClusters();
     
-    // Also refresh spreadsheet if it's open
-    refreshSpreadsheet();
+    // Also refresh spreadsheet if it's open - add small delay to ensure updates are processed
+    setTimeout(() => {
+        refreshSpreadsheet();
+    }, 100);
     
     console.log(`Marked ${changedCount} buildings as checked in Work Block ${clusterIndex + 1}`);
     alert(`✅ Marked ${changedCount} buildings in Work Block ${clusterIndex + 1} as checked!`);
@@ -5467,13 +5468,8 @@ function clearAllFilters() {
 window.clearAllFilters = clearAllFilters;
 
 function populateBuildingSpreadsheet() {
-    console.log('populateBuildingSpreadsheet called');
     const tableBody = document.getElementById('building-table-body');
     const buildingStats = document.getElementById('building-stats');
-    
-    console.log('tableBody found:', !!tableBody);
-    console.log('buildingStats found:', !!buildingStats);
-    console.log('buildingData length:', buildingData.length);
     
     if (!tableBody || !buildingStats) {
         console.error('Required spreadsheet elements not found');
@@ -5485,7 +5481,6 @@ function populateBuildingSpreadsheet() {
     
     // Filter buildings based on current filters
     const filteredBuildings = getFilteredBuildings();
-    console.log('filteredBuildings length:', filteredBuildings.length);
     
     // Calculate stats
     const totalBuildings = buildingData.length;
@@ -5644,7 +5639,6 @@ function refreshSpreadsheet() {
     // Update stats and re-render if spreadsheet is open
     const modal = document.getElementById('building-list-modal');
     if (modal && modal.style.display === 'block') {
-        console.log('Refreshing building spreadsheet');
         populateBuildingSpreadsheet();
     }
 }
