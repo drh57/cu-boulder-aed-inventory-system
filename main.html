@@ -4714,8 +4714,13 @@ document.addEventListener('DOMContentLoaded', () => {
             displayClusters();
             // Update total time summary after initial display
             setTimeout(() => updateTotalTimeSummary(), 100);
-            // Enhance routes with actual geometry after initial display
-            enhanceRoutesWithActualPaths();
+            // Enhance routes with actual geometry after initial display (only if not in campus mode)
+            const campusMode = document.getElementById('campus-mode') && document.getElementById('campus-mode').checked;
+            if (!campusMode) {
+                enhanceRoutesWithActualPaths();
+            } else {
+                console.log('Campus mode is ON - skipping route enhancement, keeping straight-line routes');
+            }
         }, 50);
     }
 
@@ -5134,17 +5139,22 @@ document.addEventListener('DOMContentLoaded', () => {
         if (campusMode) {
             // Clear any existing actual route times when switching to campus mode
             actualRouteTimes = {};
-            console.log('Cleared actual route times for campus mode');
+            console.log('Cleared actual route times for campus mode - routes will be straight-line only');
         }
         
-        // Refresh the display
-        displayClusters();
+        // Force complete regeneration of display with new route style
+        if (window.displayClusters) {
+            window.displayClusters();
+        }
         
         // Update routes based on mode
         setTimeout(() => {
             if (!campusMode) {
                 // Only fetch actual routes if not in campus mode
+                console.log('Campus mode OFF - will fetch actual route geometry');
                 enhanceRoutesWithActualPaths();
+            } else {
+                console.log('Campus mode ON - keeping straight-line routes, no auto-updating');
             }
             updateTotalTimeSummary();
         }, 100);
