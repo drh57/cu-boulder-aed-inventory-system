@@ -1267,6 +1267,8 @@ const buildingData = [
     { code: "ZUNI", name: "ZUNI (ZUNI)", gsf: 126, aedCount: 1, lat: 39.9926, lon: -105.5457 }
 ];
 
+// Global variables accessible to all functions
+let currentClusters = [];
 
 document.addEventListener('DOMContentLoaded', () => {
     const summaryContentEl = document.getElementById('summary-content');
@@ -1353,8 +1355,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Initialize add building modal now that map is ready
     initializeAddBuildingModal();
     
-    // Global variable to store current clusters for PDF generation
-    let currentClusters = [];
+    // Variables to store cluster-related information
     let manuallyArranged = false;
     let routeSegments = []; // Store references to route segments for replacement
     let actualRouteTimes = {}; // Store actual route times for sidebar updates
