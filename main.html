@@ -2099,37 +2099,47 @@ document.addEventListener('DOMContentLoaded', () => {
             pdf.text(`${Math.round(cluster.totalTime)} min`, MARGIN + 120, yPosition);
             pdf.text(`(${(cluster.totalTime/60).toFixed(1)} hours)`, MARGIN + 145, yPosition);
             
-            // Add map screenshot
+            // Add map screenshots (multiple per cluster)
             yPosition += 10;
             pdf.setFontSize(12);
             pdf.setTextColor(40);
-            pdf.text('Route Map:', MARGIN, yPosition);
+            pdf.text('Route Maps:', MARGIN, yPosition);
             yPosition += 10;
             
             try {
-                const mapImage = await captureClusterMap(cluster, i);
-                if (mapImage) {
-                    // Check if we need a new page for the map
-                    const mapHeight = 120; // Reasonable height for map
-                    if (yPosition + mapHeight > PAGE_HEIGHT - MARGIN - 20) {
-                        pdf.addPage();
-                        yPosition = MARGIN;
-                        pdf.setFontSize(12);
-                        pdf.setTextColor(40);
-                        pdf.text('Route Map:', MARGIN, yPosition);
-                        yPosition += 10;
+                const mapScreenshots = await captureClusterMap(cluster, i);
+                if (mapScreenshots && mapScreenshots.length > 0) {
+                    
+                    for (let screenshotIndex = 0; screenshotIndex < mapScreenshots.length; screenshotIndex++) {
+                        const screenshot = mapScreenshots[screenshotIndex];
+                        const mapHeight = 120; // Height for each map
+                        
+                        // Check if we need a new page for this map
+                        if (yPosition + mapHeight + 30 > PAGE_HEIGHT - MARGIN - 20) {
+                            pdf.addPage();
+                            yPosition = MARGIN;
+                        }
+                        
+                        // Add section header for multi-part maps
+                        if (mapScreenshots.length > 1) {
+                            pdf.setFontSize(10);
+                            pdf.setTextColor(100);
+                            pdf.text(`Map Section ${screenshot.groupIndex} of ${screenshot.totalGroups} - Buildings: ${screenshot.buildings.join(', ')}`, MARGIN, yPosition);
+                            yPosition += 8;
+                        }
+                        
+                        // Add the map image to PDF
+                        const imgWidth = CONTENT_WIDTH;
+                        const imgHeight = mapHeight;
+                        
+                        // Add a border around the map
+                        pdf.setDrawColor(200);
+                        pdf.rect(MARGIN - 1, yPosition - 1, imgWidth + 2, imgHeight + 2);
+                        
+                        pdf.addImage(screenshot.image, 'PNG', MARGIN, yPosition, imgWidth, imgHeight);
+                        yPosition += imgHeight + 15;
                     }
                     
-                    // Add the map image to PDF with proper scaling
-                    const imgWidth = CONTENT_WIDTH; // Use full content width (page width minus margins)
-                    const imgHeight = mapHeight;
-                    
-                    // Add a border around the map for better presentation
-                    pdf.setDrawColor(200);
-                    pdf.rect(MARGIN - 1, yPosition - 1, imgWidth + 2, imgHeight + 2);
-                    
-                    pdf.addImage(mapImage, 'PNG', MARGIN, yPosition, imgWidth, imgHeight);
-                    yPosition += imgHeight + 10;
                 } else {
                     pdf.setFontSize(9);
                     pdf.setTextColor(100);
@@ -2478,186 +2488,244 @@ document.addEventListener('DOMContentLoaded', () => {
         `;
     }
 
-    // --- MAP SCREENSHOT CAPTURE ---
+    // --- MAP SCREENSHOT CAPTURE (MULTI-FRAME APPROACH) ---
     async function captureClusterMap(cluster, clusterIndex) {
         try {
             // Store current map state
             const originalView = map.getCenter();
             const originalZoom = map.getZoom();
             
-            // Calculate bounds for this cluster
-            const lats = cluster.path.map(b => b.lat);
-            const lons = cluster.path.map(b => b.lon);
-            const minLat = Math.min(...lats);
-            const maxLat = Math.max(...lats);
-            const minLon = Math.min(...lons);
-            const maxLon = Math.max(...lons);
+            const clusterColor = BASE_COLORS[clusterIndex % BASE_COLORS.length];
+            const screenshots = [];
             
-            // Add padding to bounds (more conservative for better framing)
-            const latPadding = Math.max((maxLat - minLat) * 0.3, 0.001);
-            const lonPadding = Math.max((maxLon - minLon) * 0.3, 0.001);
-            const bounds = [
-                [minLat - latPadding, minLon - lonPadding],
-                [maxLat + latPadding, maxLon + lonPadding]
-            ];
+            // Constants for consistent map framing
+            const FIXED_ZOOM = 16; // Good balance of context and detail
+            const CAPTURE_WIDTH = 800;
+            const CAPTURE_HEIGHT = 500;
             
-            // Clear all existing layers completely
+            // Clear all existing layers
             mapLayers.clearLayers();
-            
-            // Force map invalidation to ensure clean state
             map.invalidateSize();
-            
-            // Wait a moment for clearing
             await new Promise(resolve => setTimeout(resolve, 200));
             
-            // Create temporary markers and route for just this cluster
-            const clusterColor = BASE_COLORS[clusterIndex % BASE_COLORS.length];
+            // Add all routes for the entire cluster
+            await addClusterRoutesToMap(cluster, clusterColor);
             
-            // Add route lines - use real routes if available, otherwise straight lines
-            for (let i = 0; i < cluster.path.length - 1; i++) {
-                const fromBuilding = cluster.path[i];
-                const toBuilding = cluster.path[i + 1];
+            // Determine capture points - group nearby buildings together
+            const captureGroups = groupBuildingsForCapture(cluster.path);
+            
+            console.log(`Cluster ${clusterIndex + 1}: Creating ${captureGroups.length} map screenshots`);
+            
+            for (let groupIndex = 0; groupIndex < captureGroups.length; groupIndex++) {
+                const group = captureGroups[groupIndex];
                 
-                // Check if we have real route geometry stored
-                const routeKey = `${fromBuilding.code}-${toBuilding.code}`;
-                let routeGeometry = null;
+                // Calculate center point for this group
+                const centerLat = group.reduce((sum, b) => sum + b.lat, 0) / group.length;
+                const centerLon = group.reduce((sum, b) => sum + b.lon, 0) / group.length;
                 
-                if (window.realRoutes && window.realRoutes[routeKey]) {
-                    routeGeometry = window.realRoutes[routeKey].geometry;
-                }
+                // Set map view to center on this group
+                map.setView([centerLat, centerLon], FIXED_ZOOM);
                 
-                if (routeGeometry && routeGeometry.coordinates) {
-                    // Draw real route using stored geometry
-                    const coordinates = routeGeometry.coordinates.map(coord => [coord[1], coord[0]]); // flip lon,lat to lat,lon
-                    const routeLine = L.polyline(coordinates, {
-                        color: clusterColor,
-                        weight: 6,
-                        opacity: 0.9,
-                        lineCap: 'round',
-                        lineJoin: 'round'
+                // Clear existing building markers and add markers for the current view
+                await addBuildingMarkersToMap(cluster.path, clusterColor, group);
+                
+                // Wait for map to render
+                await new Promise(resolve => setTimeout(resolve, 1000));
+                
+                // Capture the screenshot
+                const canvas = await captureMapCanvas();
+                if (canvas) {
+                    screenshots.push({
+                        image: canvas.toDataURL('image/png', 0.9),
+                        buildings: group.map(b => b.code),
+                        groupIndex: groupIndex + 1,
+                        totalGroups: captureGroups.length
                     });
-                    routeLine.addTo(mapLayers);
-                } else {
-                    // Fall back to straight line
-                    const routeLine = L.polyline([[fromBuilding.lat, fromBuilding.lon], [toBuilding.lat, toBuilding.lon]], {
-                        color: clusterColor,
-                        weight: 6,
-                        opacity: 0.6,
-                        dashArray: '12, 8',
-                        lineCap: 'round',
-                        lineJoin: 'round'
-                    });
-                    routeLine.addTo(mapLayers);
                 }
             }
             
-            // Add markers with better visibility
-            cluster.path.forEach((building, buildingIndex) => {
-                // Background circle for better visibility
-                const backgroundMarker = L.circleMarker([building.lat, building.lon], {
-                    color: 'white', 
-                    weight: 3, 
-                    fillColor: clusterColor, 
-                    fillOpacity: 1.0, 
-                    radius: 12
-                }).addTo(mapLayers);
+            // Restore original map state
+            map.setView(originalView, originalZoom);
+            
+            return screenshots;
+            
+        } catch (error) {
+            console.error('Error capturing cluster maps:', error);
+            return [];
+        }
+    }
+    
+    // Helper function to group buildings for capture based on distance
+    function groupBuildingsForCapture(buildings) {
+        const groups = [];
+        const processed = new Set();
+        const MAX_GROUP_DISTANCE = 400; // meters - buildings within this distance will be grouped
+        
+        for (let i = 0; i < buildings.length; i++) {
+            if (processed.has(i)) continue;
+            
+            const group = [buildings[i]];
+            processed.add(i);
+            
+            // Find nearby buildings to include in this group
+            for (let j = i + 1; j < buildings.length; j++) {
+                if (processed.has(j)) continue;
                 
-                // Number label with better styling
-                const numberIcon = L.divIcon({
-                    html: `<div style="
-                        background: ${clusterColor}; 
-                        color: white; 
-                        border: 2px solid white;
-                        border-radius: 50%; 
-                        width: 24px; 
-                        height: 24px; 
-                        display: flex; 
-                        align-items: center; 
-                        justify-content: center; 
-                        font-weight: bold; 
-                        font-size: 14px;
-                        box-shadow: 0 2px 4px rgba(0,0,0,0.3);
-                        font-family: Arial, sans-serif;
-                    ">${buildingIndex + 1}</div>`,
-                    className: '',
-                    iconSize: [24, 24],
-                    iconAnchor: [12, 12]
+                const distance = calculateDistance(
+                    buildings[i].lat, buildings[i].lon,
+                    buildings[j].lat, buildings[j].lon
+                );
+                
+                if (distance <= MAX_GROUP_DISTANCE) {
+                    group.push(buildings[j]);
+                    processed.add(j);
+                }
+            }
+            
+            groups.push(group);
+        }
+        
+        return groups;
+    }
+    
+    // Helper function to add cluster routes to map
+    async function addClusterRoutesToMap(cluster, clusterColor) {
+        for (let i = 0; i < cluster.path.length - 1; i++) {
+            const fromBuilding = cluster.path[i];
+            const toBuilding = cluster.path[i + 1];
+            
+            // Check if we have real route geometry
+            const routeKey = `${fromBuilding.code}-${toBuilding.code}`;
+            let routeGeometry = null;
+            
+            if (window.realRoutes && window.realRoutes[routeKey]) {
+                routeGeometry = window.realRoutes[routeKey].geometry;
+            }
+            
+            if (routeGeometry && routeGeometry.coordinates) {
+                // Draw real route
+                const coordinates = routeGeometry.coordinates.map(coord => [coord[1], coord[0]]);
+                const routeLine = L.polyline(coordinates, {
+                    color: clusterColor,
+                    weight: 4,
+                    opacity: 0.8,
+                    lineCap: 'round',
+                    lineJoin: 'round'
                 });
-                
-                L.marker([building.lat, building.lon], { 
-                    icon: numberIcon,
-                    zIndexOffset: 1000  // Ensure markers appear on top
-                }).addTo(mapLayers);
-                
-                // Building code label with better styling
+                routeLine.addTo(mapLayers);
+            } else {
+                // Fall back to straight line
+                const routeLine = L.polyline([[fromBuilding.lat, fromBuilding.lon], [toBuilding.lat, toBuilding.lon]], {
+                    color: clusterColor,
+                    weight: 4,
+                    opacity: 0.6,
+                    dashArray: '8, 6',
+                    lineCap: 'round',
+                    lineJoin: 'round'
+                });
+                routeLine.addTo(mapLayers);
+            }
+        }
+    }
+    
+    // Helper function to add building markers with focus on current group
+    async function addBuildingMarkersToMap(allBuildings, clusterColor, focusGroup) {
+        // Remove existing building markers
+        mapLayers.eachLayer(layer => {
+            if (layer instanceof L.Marker) {
+                mapLayers.removeLayer(layer);
+            }
+        });
+        
+        allBuildings.forEach((building, buildingIndex) => {
+            const isInFocus = focusGroup.some(b => b.code === building.code);
+            const opacity = isInFocus ? 1.0 : 0.5; // Dim non-focus buildings
+            const radius = isInFocus ? 15 : 10; // Larger for focus buildings
+            
+            // Background circle
+            L.circleMarker([building.lat, building.lon], {
+                color: 'white',
+                weight: 2,
+                fillColor: clusterColor,
+                fillOpacity: opacity,
+                radius: radius
+            }).addTo(mapLayers);
+            
+            // Step number marker
+            const numberIcon = L.divIcon({
+                html: `<div style="
+                    background: ${clusterColor}; 
+                    color: white; 
+                    border: 2px solid white;
+                    border-radius: 50%; 
+                    width: ${radius * 2}px; 
+                    height: ${radius * 2}px; 
+                    display: flex; 
+                    align-items: center; 
+                    justify-content: center; 
+                    font-weight: bold; 
+                    font-size: ${isInFocus ? '14px' : '12px'};
+                    opacity: ${opacity};
+                    box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+                    font-family: Arial, sans-serif;
+                ">${buildingIndex + 1}</div>`,
+                className: '',
+                iconSize: [radius * 2, radius * 2],
+                iconAnchor: [radius, radius]
+            });
+            
+            L.marker([building.lat, building.lon], { 
+                icon: numberIcon,
+                zIndexOffset: isInFocus ? 1000 : 500
+            }).addTo(mapLayers);
+            
+            // Building code label (only for focus buildings to avoid clutter)
+            if (isInFocus) {
                 L.marker([building.lat, building.lon], {
                     icon: L.divIcon({
                         html: `<div style="
                             background: rgba(255,255,255,0.95); 
-                            padding: 3px 6px; 
-                            border-radius: 4px; 
+                            padding: 2px 5px; 
+                            border-radius: 3px; 
                             font-size: 11px; 
                             font-weight: bold; 
-                            margin-top: 30px;
+                            margin-top: ${radius * 2 + 5}px;
                             border: 1px solid #ccc;
                             box-shadow: 0 1px 3px rgba(0,0,0,0.2);
                             font-family: Arial, sans-serif;
                         ">${building.code}</div>`,
                         className: '',
-                        iconSize: [50, 20],
-                        iconAnchor: [25, 0]
+                        iconSize: [60, 20],
+                        iconAnchor: [30, 0]
                     }),
-                    zIndexOffset: 500
+                    zIndexOffset: 750
                 }).addTo(mapLayers);
-            });
-            
-            // Fit map to cluster bounds with more generous padding
-            map.fitBounds(bounds, { 
-                padding: [30, 30],
-                maxZoom: 17  // Prevent zooming in too much for single buildings
-            });
-            
-            // Wait longer for map to render and layers to load
-            await new Promise(resolve => setTimeout(resolve, 1500));
-            
-            // Force one more layer refresh
-            mapLayers.bringToFront();
-            
-            // Additional wait for final rendering
-            await new Promise(resolve => setTimeout(resolve, 500));
-            
-            // Capture the map with optimized settings
-            const mapElement = document.getElementById('map');
-            
-            const canvas = await html2canvas(mapElement, {
-                useCORS: true,
-                allowTaint: false,
-                backgroundColor: '#f8f9fa',
-                width: 800,
-                height: 500,
-                scale: 1.5,  // Higher quality capture
-                logging: false,
-                foreignObjectRendering: true,  // Try to capture custom HTML elements
-                removeContainer: false,
-                imageTimeout: 30000,  // Longer timeout for image loading
-                onclone: function(clonedDoc) {
-                    // Ensure styles are preserved in cloned document
-                    const clonedMap = clonedDoc.getElementById('map');
-                    if (clonedMap) {
-                        clonedMap.style.background = '#f8f9fa';
-                    }
+            }
+        });
+    }
+    
+    // Helper function to capture map canvas
+    async function captureMapCanvas() {
+        const mapElement = document.getElementById('map');
+        
+        return await html2canvas(mapElement, {
+            useCORS: true,
+            allowTaint: false,
+            backgroundColor: '#f8f9fa',
+            width: 800,
+            height: 500,
+            scale: 1.5,
+            logging: false,
+            foreignObjectRendering: true,
+            removeContainer: false,
+            imageTimeout: 30000,
+            onclone: function(clonedDoc) {
+                const clonedMap = clonedDoc.getElementById('map');
+                if (clonedMap) {
+                    clonedMap.style.background = '#f8f9fa';
                 }
-            });
-            
-            // Restore original map state
-            map.setView(originalView, originalZoom);
-            
-            return canvas.toDataURL('image/png', 0.9);  // Slight compression for smaller file size
-            
-        } catch (error) {
-            console.error('Error capturing map:', error);
-            return null;
-        }
+            }
+        });
     }
 
     // --- HELPER FUNCTIONS ---
@@ -6359,4 +6427,4 @@ function initializeAddBuildingModal() {
 
 </script>
 </body>
-</html>
+</html>image.png
