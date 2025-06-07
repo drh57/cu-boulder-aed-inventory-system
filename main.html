@@ -5285,6 +5285,64 @@ function toggleBuildingStatus(buildingCode, updateClusters = true) {
     return false;
 }
 
+// Make toggleBuildingStatus globally accessible
+window.toggleBuildingStatus = toggleBuildingStatus;
+
+// Special version for spreadsheet that updates visual state immediately
+function toggleBuildingStatusInSpreadsheet(buildingCode) {
+    // Toggle the building status
+    const wasChecked = toggleBuildingStatus(buildingCode, false);
+    
+    // Find the checkbox that was clicked and update row styling
+    const checkboxes = document.querySelectorAll('.status-checkbox');
+    checkboxes.forEach(checkbox => {
+        const onchange = checkbox.getAttribute('onchange');
+        if (onchange && onchange.includes(`'${buildingCode}'`)) {
+            const row = checkbox.closest('tr');
+            if (row) {
+                if (wasChecked) {
+                    row.classList.add('checked');
+                } else {
+                    row.classList.remove('checked');
+                }
+                
+                // Update the text styling too
+                const cells = row.querySelectorAll('td');
+                cells.forEach(cell => {
+                    if (wasChecked) {
+                        cell.style.textDecoration = 'line-through';
+                        cell.style.color = '#666';
+                    } else {
+                        cell.style.textDecoration = 'none';
+                        cell.style.color = '';
+                    }
+                });
+            }
+        }
+    });
+    
+    // Update the statistics display
+    const buildingStats = document.getElementById('building-stats');
+    if (buildingStats) {
+        const totalBuildings = buildingData.length;
+        const checkedBuildings = buildingData.filter(b => b.checked).length;
+        const uncheckedBuildings = totalBuildings - checkedBuildings;
+        const filteredBuildings = getFilteredBuildings();
+        
+        const statsText = filteredBuildings.length === totalBuildings 
+            ? `${totalBuildings} buildings • ${checkedBuildings} checked • ${uncheckedBuildings} remaining`
+            : `${filteredBuildings.length} of ${totalBuildings} buildings shown • ${checkedBuildings} checked • ${uncheckedBuildings} remaining`;
+        
+        buildingStats.textContent = statsText;
+    }
+    
+    // Update cluster display too
+    displayClusters();
+}
+
+// Make it globally accessible
+window.toggleBuildingStatusInSpreadsheet = toggleBuildingStatusInSpreadsheet;
+
 // Make function globally accessible
 window.markClusterAsChecked = function(clusterIndex) {
     console.log(`markClusterAsChecked called with index: ${clusterIndex}`);
@@ -5385,6 +5443,9 @@ function closeBuildingSpreadsheet() {
     }
 }
 
+// Make functions globally accessible for button clicks
+window.closeBuildingSpreadsheet = closeBuildingSpreadsheet;
+
 function setupFilterListeners() {
     const filterIds = ['filter-status', 'filter-code', 'filter-name', 'filter-gsf', 'filter-aeds', 'filter-cluster', 'filter-lat', 'filter-lon'];
     
@@ -5410,6 +5471,9 @@ function clearAllFilters() {
     // Re-populate without filters
     populateBuildingSpreadsheet();
 }
+
+// Make functions globally accessible for button clicks
+window.clearAllFilters = clearAllFilters;
 
 function populateBuildingSpreadsheet() {
     const tableBody = document.getElementById('building-table-body');
@@ -5456,7 +5520,7 @@ function populateBuildingSpreadsheet() {
         row.innerHTML = `
             <td>
                 <input type="checkbox" class="status-checkbox" ${building.checked ? 'checked' : ''} 
-                       onchange="toggleBuildingStatus('${building.code}', false); refreshSpreadsheet();">
+                       onchange="toggleBuildingStatusInSpreadsheet('${building.code}');">
             </td>
             <td>${building.code}</td>
             <td>${building.name}</td>
@@ -5574,6 +5638,7 @@ function refreshSpreadsheet() {
     // Update stats and re-render if spreadsheet is open
     const modal = document.getElementById('building-list-modal');
     if (modal && modal.style.display === 'block') {
+        console.log('Refreshing building spreadsheet');
         populateBuildingSpreadsheet();
     }
 }
@@ -5737,6 +5802,9 @@ function exportBuildingData() {
     
     console.log(`Exported ${buildingsToExport.length} buildings to CSV`);
 }
+
+// Make functions globally accessible for button clicks
+window.exportBuildingData = exportBuildingData;
 
 // --- TIME-BASED CLUSTER FUNCTIONALITY ---
 function initializeTimeClusterModal() {
