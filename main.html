@@ -1285,24 +1285,26 @@ function generateClusterColors(count) {
     return colors;
 }
 
+// Configuration variables for calculations
+let TIME_PER_AED = 5;
+let TIME_PER_50K_GSF = 1;
+let AED_LOCATION_BUFFER = 8;
+let WALKING_SPEED_MPH = 3.1;
+let DRIVING_SPEED_MPH = 25;
+let PARKING_TIME = 3;
+let WALKING_THRESHOLD = 20;
+let METERS_PER_MINUTE_WALKING = (WALKING_SPEED_MPH * 1609.34) / 60;
+let METERS_PER_MINUTE_DRIVING = (DRIVING_SPEED_MPH * 1609.34) / 60;
+let MAX_CLUSTER_TIME = 240;
+let AVAILABLE_WORKERS = 10;
+
 document.addEventListener('DOMContentLoaded', () => {
     const summaryContentEl = document.getElementById('summary-content');
     const loaderEl = document.getElementById('loader');
     const mapElement = document.getElementById('map');
     const recalcButton = document.getElementById('recalculate-btn');
 
-    // --- CONFIGURATION ---
-    let TIME_PER_AED = 5; // 5 minutes per AED as requested
-    let TIME_PER_50K_GSF = 1;
-    let AED_LOCATION_BUFFER = 8; // 8 minutes per building/wing to locate AEDs (first-time search)
-    let WALKING_SPEED_MPH = 3.1;
-    let DRIVING_SPEED_MPH = 25; // Campus/city driving speed
-    let PARKING_TIME = 3; // Additional time for parking and walking from car
-    let WALKING_THRESHOLD = 20; // Switch to driving if walking > 20 minutes
-    let METERS_PER_MINUTE_WALKING = (WALKING_SPEED_MPH * 1609.34) / 60;
-    let METERS_PER_MINUTE_DRIVING = (DRIVING_SPEED_MPH * 1609.34) / 60;
-    let MAX_CLUSTER_TIME = 240;
-    let AVAILABLE_WORKERS = 10; // Number of student workers available
+    // --- CONFIGURATION (using global variables) ---
     
     // Building addresses (for PDF report)
     const buildingAddresses = {
@@ -5351,11 +5353,16 @@ function toggleBuildingStatusInSpreadsheet(buildingCode) {
     }
     
     // Update cluster display too
-    displayClusters();
+    if (window.displayClusters) {
+        window.displayClusters();
+    }
 }
 
 // Make it globally accessible
 window.toggleBuildingStatusInSpreadsheet = toggleBuildingStatusInSpreadsheet;
+
+// Make displayClusters globally accessible
+window.displayClusters = displayClusters;
 
 // Make function globally accessible
 window.markClusterAsChecked = function(clusterIndex) {
