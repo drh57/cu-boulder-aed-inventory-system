@@ -1385,6 +1385,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let manuallyArranged = false;
     let routeSegments = []; // Store references to route segments for replacement
     let actualRouteTimes = {}; // Store actual route times for sidebar updates
+    let cancelRouteEnhancement = false; // Flag to cancel ongoing route enhancement
     
     // Rectangle selection variables
     let isSelecting = false;
@@ -4356,6 +4357,9 @@ document.addEventListener('DOMContentLoaded', () => {
         // This function will replace straight-line routes with actual route geometry
         console.log('Starting route enhancement for', routeSegments.length, 'route segments');
         
+        // Reset cancellation flag at start
+        cancelRouteEnhancement = false;
+        
         const campusMode = document.getElementById('campus-mode').checked;
         if (campusMode) {
             console.log('Campus mode enabled - keeping direct path routing');
@@ -4366,6 +4370,12 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         
         for (let i = 0; i < routeSegments.length; i++) {
+            // Check for cancellation before processing each segment
+            if (cancelRouteEnhancement) {
+                console.log('Route enhancement cancelled - stopping at segment', i);
+                return;
+            }
+            
             const segment = routeSegments[i];
             
             try {
@@ -4375,6 +4385,12 @@ document.addEventListener('DOMContentLoaded', () => {
                     segment.toBuilding.lat, segment.toBuilding.lon, 
                     segment.fromBuilding.code, segment.toBuilding.code
                 );
+                
+                // Check for cancellation after async operation
+                if (cancelRouteEnhancement) {
+                    console.log('Route enhancement cancelled during route calculation - stopping');
+                    return;
+                }
                 
                 if (routeData.geometry && routeData.geometry.coordinates) {
                     console.log(`Replacing route from ${segment.fromBuilding.code} to ${segment.toBuilding.code} with actual geometry`);
@@ -5137,6 +5153,10 @@ document.addEventListener('DOMContentLoaded', () => {
         console.log('Campus mode toggled:', campusMode ? 'ON' : 'OFF');
         
         if (campusMode) {
+            // Cancel any ongoing route enhancement immediately
+            cancelRouteEnhancement = true;
+            console.log('Cancelled ongoing route enhancement for campus mode');
+            
             // Clear any existing actual route times when switching to campus mode
             actualRouteTimes = {};
             console.log('Cleared actual route times for campus mode - routes will be straight-line only');
