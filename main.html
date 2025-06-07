@@ -5510,11 +5510,13 @@ function populateBuildingSpreadsheet() {
         
         // Find which cluster this building belongs to
         let clusterAssignment = 'Unassigned';
-        currentClusters.forEach((cluster, index) => {
-            if (cluster.path.some(b => b.code === building.code)) {
-                clusterAssignment = `Work Block ${index + 1}`;
-            }
-        });
+        if (currentClusters && Array.isArray(currentClusters)) {
+            currentClusters.forEach((cluster, index) => {
+                if (cluster.path.some(b => b.code === building.code)) {
+                    clusterAssignment = `Work Block ${index + 1}`;
+                }
+            });
+        }
         
         row.innerHTML = `
             <td>
