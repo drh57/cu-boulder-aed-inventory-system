@@ -5555,6 +5555,11 @@ function populateClusterFilter() {
     const clusterFilter = document.getElementById('filter-cluster');
     if (!clusterFilter) return;
     
+    // Check if currentClusters exists (might not be defined yet on initial load)
+    if (!currentClusters || !Array.isArray(currentClusters)) {
+        return;
+    }
+    
     // Get existing options
     const existingOptions = Array.from(clusterFilter.options).map(opt => opt.value);
     
@@ -5578,11 +5583,13 @@ function getFilteredBuildings() {
     return buildingData.filter(building => {
         // Find cluster assignment
         let clusterAssignment = 'Unassigned';
-        currentClusters.forEach((cluster, index) => {
-            if (cluster.path.some(b => b.code === building.code)) {
-                clusterAssignment = `Work Block ${index + 1}`;
-            }
-        });
+        if (currentClusters && Array.isArray(currentClusters)) {
+            currentClusters.forEach((cluster, index) => {
+                if (cluster.path.some(b => b.code === building.code)) {
+                    clusterAssignment = `Work Block ${index + 1}`;
+                }
+            });
+        }
         
         // Apply filters
         if (buildingFilters.status) {
@@ -5647,7 +5654,7 @@ function refreshSpreadsheet() {
 
 function getClusterColor(clusterAssignment) {
     const clusterIndex = parseInt(clusterAssignment.replace('Work Block ', '')) - 1;
-    if (clusterIndex >= 0 && clusterIndex < currentClusters.length) {
+    if (currentClusters && Array.isArray(currentClusters) && clusterIndex >= 0 && clusterIndex < currentClusters.length) {
         const colors = generateClusterColors(currentClusters.length);
         return colors[clusterIndex];
     }
