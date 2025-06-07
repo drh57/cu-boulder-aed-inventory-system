@@ -5468,11 +5468,17 @@ function clearAllFilters() {
 window.clearAllFilters = clearAllFilters;
 
 function populateBuildingSpreadsheet() {
+    console.log('🔍 populateBuildingSpreadsheet called');
+    console.log('📊 buildingData length:', buildingData ? buildingData.length : 'UNDEFINED');
+    
     const tableBody = document.getElementById('building-table-body');
     const buildingStats = document.getElementById('building-stats');
     
+    console.log('🎯 tableBody found:', !!tableBody);
+    console.log('📈 buildingStats found:', !!buildingStats);
+    
     if (!tableBody || !buildingStats) {
-        console.error('Required spreadsheet elements not found');
+        console.error('❌ Required spreadsheet elements not found');
         return;
     }
     
@@ -5481,6 +5487,11 @@ function populateBuildingSpreadsheet() {
     
     // Filter buildings based on current filters
     const filteredBuildings = getFilteredBuildings();
+    console.log('✅ filteredBuildings length:', filteredBuildings.length);
+    
+    if (filteredBuildings.length > 0) {
+        console.log('🏢 First building sample:', filteredBuildings[0]);
+    }
     
     // Calculate stats
     const totalBuildings = buildingData.length;
@@ -5496,9 +5507,11 @@ function populateBuildingSpreadsheet() {
     
     // Clear existing content
     tableBody.innerHTML = '';
+    console.log('🗑️ Cleared table body, about to add rows...');
     
     // Add rows for filtered buildings
-    filteredBuildings.forEach(building => {
+    filteredBuildings.forEach((building, index) => {
+        console.log(`🏗️ Creating row ${index + 1} for building:`, building.code);
         const row = document.createElement('tr');
         
         // Add checked class for styling
@@ -5543,7 +5556,10 @@ function populateBuildingSpreadsheet() {
         `;
         
         tableBody.appendChild(row);
+        console.log(`✅ Added row for building ${building.code}`);
     });
+    
+    console.log('🎉 Finished adding all rows. Total rows in table:', tableBody.children.length);
     
     // Setup table sorting
     setupTableSorting();
